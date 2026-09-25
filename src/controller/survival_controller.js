@@ -89,7 +89,7 @@ function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 1
   const baseAngle = Math.atan2(awayZ / awayLen, awayX / awayLen);
 
   const angleOffsets = [0, 0.44, -0.44, 0.87, -0.87, 1.3, -1.3];
-  const distances = [maxFleeDist, (minFleeDist + maxFleeDist) / 2, minFleeDist];
+  const distances = [maxFleeDist, 16, (minFleeDist + maxFleeDist) / 2, 14, minFleeDist];
 
   for (const dist of distances) {
     for (const ang of angleOffsets) {
@@ -131,11 +131,8 @@ function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 1
     }
   }
 
-  return new Vec3(
-    Math.floor(botPos.x + (awayX / awayLen) * minFleeDist) + 0.5,
-    botPos.y,
-    Math.floor(botPos.z + (awayZ / awayLen) * minFleeDist) + 0.5
-  );
+  // If no validated candidate found, return null to avoid moving into unvalidated hazards
+  return null;
 }
 
 /**
@@ -242,6 +239,8 @@ class SurvivalController {
     /** @type {number} */
     this._shelteredTickCount = 0;
 
+    this.breachDetected = false;
+
     /** Stage 4 progression milestones */
     this.milestones = {
       woodenPickaxeAchieved: false,
@@ -286,8 +285,7 @@ class SurvivalController {
               newBlock: newBlock?.name,
               reason: 'block_broken_during_night',
             });
-            this.shelterSafetyClaim = false;
-            this._scheduleTick(0, this.currentRunId);
+            this._handleShelterBreach(pos, 'block_broken_during_night', this.currentRunId);
           }
         }
       }
@@ -300,6 +298,46 @@ class SurvivalController {
     }
   }
 
+  /**
+   * Explicit state transition handling when a shelter breach occurs.
+   *
+   * @param {import('vec3').Vec3|object} [pos]
+   * @param {string} [reason='shelter_breached']
+   * @param {string} [runId]
+   */
+  _handleShelterBreach(pos, reason = 'shelter_breached', runId = this.currentRunId) {
+    this.shelterSafetyClaim = false;
+    this.breachDetected = true;
+    const timeOfDay = this.bot?.time?.timeOfDay ?? 0;
+    const isNight = timeOfDay >= 12000 && timeOfDay < 23000;
+
+    const bp = loadBlueprint();
+    if (bp && Array.isArray(bp.verifiedCoordinates) && pos) {
+      const posKey = `${pos.x},${pos.y},${pos.z}`;
+      bp.verifiedCoordinates = bp.verifiedCoordinates.filter(c => c !== posKey);
+      if (Array.isArray(bp.requiredCoordinates)) {
+        const rc = bp.requiredCoordinates.find(c => c.x === pos.x && c.y === pos.y && c.z === pos.z);
+        if (rc) rc.verified = false;
+      }
+      saveBlueprint(bp);
+    }
+
+    if (!isNight && timeOfDay < 12000) {
+      // Before dusk: transition to build_shelter for bounded repair
+      this.currentGoal = 'build_shelter';
+      this._scheduleTick(0, runId);
+    } else {
+      // During night: transition to failed_unsafe emergency policy
+      this.status = 'failed_unsafe';
+      this.active = false;
+      this.telemetry?.emit({
+        event: 'shelter_breach_terminal',
+        controllerRunId: runId,
+        reason: 'breach_during_night_unrecoverable',
+        timeOfDay,
+      });
+    }
+  }
 
   /**
    * Starts the controller with the specified goal.
@@ -314,6 +352,26 @@ class SurvivalController {
     if (this.active) {
       await this.stop('restarted');
     }
+
+    // Reset FailureTracker and run-scoped state
+    if (this.failureTracker && typeof this.failureTracker.reset === 'function') {
+      this.failureTracker.reset();
+    }
+    this.milestones = {
+      woodenPickaxeAchieved: false,
+      stonePickaxeAchieved: false,
+      foodReserveAcquired: false,
+      buildingReserveAcquired: false,
+      shelterEnclosed: false,
+      nightSurvived: false,
+      dawnExitCompleted: false,
+    };
+    this._recordedMilestones = new Set();
+    this._dawnWaitStartTime = null;
+    this._shelteredTickCount = 0;
+    this._fleeAttemptCount = 0;
+    this.breachDetected = false;
+    this.goalStack = [];
 
     // Validate any persisted blueprint identity
     const existingBp = loadBlueprint();
@@ -451,7 +509,10 @@ class SurvivalController {
     if (milestoneName === 'food_reserve_acquired') this.milestones.foodReserveAcquired = true;
     if (milestoneName === 'shelter_enclosed') this.milestones.shelterEnclosed = true;
     if (milestoneName === 'dawn_exit_completed') this.milestones.dawnExitCompleted = true;
-    if (milestoneName === 'night_survived') this.milestones.nightSurvived = true;
+    if (milestoneName === 'night_survived') {
+      if (this.breachDetected) return;
+      this.milestones.nightSurvived = true;
+    }
 
     if (this._recordedMilestones.has(milestoneName)) return;
     this._recordedMilestones.add(milestoneName);
@@ -628,6 +689,17 @@ class SurvivalController {
         }
         if (!this.active || this.currentRunId !== runId) return;
         this._scheduleTick(100, runId);
+        return;
+      } else {
+        this.telemetry?.emit({
+          event: 'controller_warning',
+          controllerRunId: runId,
+          generation: this.generation,
+          warning: 'no_safe_flee_destination',
+          threatCount: threats.length,
+        });
+        if (!this.active || this.currentRunId !== runId) return;
+        this._scheduleTick(500, runId);
         return;
       }
     }
@@ -899,13 +971,14 @@ class SurvivalController {
 
 
     // 6. Budget Check: Only actual dispatched actions count against budget
-    if (this.failureTracker.isBudgetExceeded()) {
+    if (this.failureTracker.isBudgetExceeded(this.currentGoal)) {
       this.telemetry?.emit({
         event: 'controller_stop',
         controllerRunId: runId,
         generation: this.generation,
         reason: 'budget_exceeded',
         dispatchedActions: this.failureTracker.getDispatchedActions(),
+        goalDispatched: this.failureTracker.getDispatchedActionsForGoal(this.currentGoal),
       });
       await this.stop('budget_exceeded');
       return;
@@ -1097,7 +1170,8 @@ class SurvivalController {
                 reason: 'periodic_audit_failed',
                 audit,
               });
-              this.shelterSafetyClaim = false;
+              this._handleShelterBreach(audit.missingCoordinates?.[0], 'periodic_audit_failed', runId);
+              return;
             }
           }
         }
@@ -1240,7 +1314,7 @@ class SurvivalController {
       });
 
       // Increment actual dispatched action count
-      this.failureTracker.incrementDispatchedActions();
+      this.failureTracker.incrementDispatchedActions(this.currentGoal);
 
       let result;
       try {
@@ -1331,8 +1405,9 @@ class SurvivalController {
     if (this.bot) {
       this.bot.removeListener('death', this._onDeath);
       this.bot.removeListener('end', this._onEnd);
+      this.bot.removeListener('blockUpdate', this._onBlockUpdate);
     }
   }
 }
 
-module.exports = { SurvivalController };
+module.exports = { SurvivalController, findSafeFleeDestination };

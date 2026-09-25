@@ -143,9 +143,17 @@ class ActionManager {
         );
       });
 
+      let executionPromise;
+      try {
+        executionPromise = Promise.resolve(executeFn(signal, actionId, actionRecord));
+      } catch (err) {
+        executionPromise = Promise.reject(err);
+      }
+      actionRecord.executionPromise = executionPromise;
+
       // Race between the execution function, timeout, and manual abort.
       result = await Promise.race([
-        executeFn(signal, actionId, actionRecord),
+        executionPromise,
         timeoutPromise,
         abortPromise,
       ]);
@@ -161,8 +169,25 @@ class ActionManager {
         actionRecord.timeoutHandle = null;
       }
       this._stopBotMovement();
-      if (this.currentAction === actionRecord) {
-        this.currentAction = null;
+
+      if (actionRecord.executionPromise) {
+        const settlementPromise = actionRecord.executionPromise
+          .catch(() => {})
+          .finally(() => {
+            if (this.currentAction === actionRecord) {
+              this.currentAction = null;
+            }
+          });
+
+        // Bounded cleanup wait (up to 500ms) before returning from run()
+        await Promise.race([
+          settlementPromise,
+          new Promise(r => setTimeout(r, 500)),
+        ]);
+      } else {
+        if (this.currentAction === actionRecord) {
+          this.currentAction = null;
+        }
       }
     }
 

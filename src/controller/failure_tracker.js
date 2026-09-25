@@ -12,13 +12,17 @@ class FailureTracker {
    */
   constructor(options = {}) {
     this.defaultCooldownMs = options.defaultCooldownMs ?? 10000;
-    this.maxDispatchedActions = options.maxDispatchedActions ?? 60;
+    this.maxDispatchedActions = options.maxDispatchedActions ?? 500;
+    this.maxDispatchedPerGoal = options.maxDispatchedPerGoal ?? 150;
 
     /** @type {Map<string, { count: number, lastFailedAt: number, cooldownUntil: number, lastReason: string }>} */
     this.failures = new Map();
 
     /** @type {number} */
     this.dispatchedCount = 0;
+
+    /** @type {Map<string, number>} */
+    this.goalDispatched = new Map();
   }
 
   /**
@@ -94,10 +98,14 @@ class FailureTracker {
    * Increments the count of actual dispatched actions against the step budget.
    * Observation cycles and cooldown waiting do not increment this counter.
    *
+   * @param {string} [goal]
    * @returns {number}
    */
-  incrementDispatchedActions() {
+  incrementDispatchedActions(goal = null) {
     this.dispatchedCount += 1;
+    if (goal) {
+      this.goalDispatched.set(goal, (this.goalDispatched.get(goal) || 0) + 1);
+    }
     return this.dispatchedCount;
   }
 
@@ -109,10 +117,21 @@ class FailureTracker {
   }
 
   /**
+   * @param {string} [goal]
+   * @returns {number}
+   */
+  getDispatchedActionsForGoal(goal) {
+    return goal ? (this.goalDispatched.get(goal) || 0) : 0;
+  }
+
+  /**
+   * @param {string} [goal]
    * @returns {boolean}
    */
-  isBudgetExceeded() {
-    return this.dispatchedCount >= this.maxDispatchedActions;
+  isBudgetExceeded(goal = null) {
+    if (this.dispatchedCount >= this.maxDispatchedActions) return true;
+    if (goal && (this.goalDispatched.get(goal) || 0) >= this.maxDispatchedPerGoal) return true;
+    return false;
   }
 
   /**
@@ -121,6 +140,7 @@ class FailureTracker {
   reset() {
     this.failures.clear();
     this.dispatchedCount = 0;
+    this.goalDispatched.clear();
   }
 }
 

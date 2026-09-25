@@ -832,6 +832,14 @@ class GoalPlanner {
           if (targetBlock) gatherPos = targetBlock.position;
         }
 
+        if (!simulatedState && !gatherPos) {
+          return {
+            status: 'failed',
+            reason: 'no_safe_material_source',
+            details: { currentExpendable: expendable, needed: targetMaterials - expendable },
+          };
+        }
+
         return {
           status: 'action_required',
           action: 'gather',

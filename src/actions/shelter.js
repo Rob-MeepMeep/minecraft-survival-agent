@@ -29,6 +29,20 @@ const HAZARDOUS_BLOCKS = new Set([
   'sweet_berry_bush', 'cactus', 'magma_block', 'wither_rose',
 ]);
 
+/** Comprehensive hostile taxonomy for shelter safety and exit auditing */
+const RANGED_HOSTILES = new Set([
+  'skeleton', 'pillager', 'stray', 'bogged', 'witch', 'blaze', 'ghast', 'evoker',
+]);
+
+const MELEE_HOSTILES = new Set([
+  'zombie', 'creeper', 'spider', 'cave_spider', 'enderman', 'slime', 'phantom',
+  'drowned', 'husk', 'vindicator', 'ravager', 'vex', 'magma_cube', 'hoglin',
+  'piglin_brute', 'warden', 'wither_skeleton', 'zombified_piglin', 'guardian',
+  'elder_guardian', 'shulker', 'breeze',
+]);
+
+const ALL_HOSTILES = new Set([...RANGED_HOSTILES, ...MELEE_HOSTILES]);
+
 /**
  * Checks whether a block name is replaceable vegetation.
  *
@@ -322,44 +336,63 @@ function createShelterBlueprint(center, exitDirection, material = 'dirt', metada
 }
 
 /**
- * Saves shelter blueprint atomically to disk.
+ * Saves shelter blueprint atomically to disk with durable sync.
  *
  * @param {object} blueprint
+ * @returns {{ ok: boolean, file?: string, error?: string }}
  */
 function saveBlueprint(blueprint) {
   try {
     blueprint.updatedAt = Date.now();
     const file = getBlueprintFile();
     const tmp = `${file}.tmp`;
-    fs.writeFileSync(tmp, JSON.stringify(blueprint, null, 2), 'utf8');
+    const fd = fs.openSync(tmp, 'w');
+    fs.writeFileSync(fd, JSON.stringify(blueprint, null, 2), 'utf8');
+    fs.fsyncSync(fd);
+    fs.closeSync(fd);
     fs.renameSync(tmp, file);
-  } catch {
-    // Disk write error
+    return { ok: true, file };
+  } catch (err) {
+    return { ok: false, error: err.message };
   }
 }
 
 /**
  * Loads shelter blueprint from disk if it exists and is structurally valid.
+ * Quarantines corrupt files under a diagnostic name.
  *
  * @returns {object|null}
  */
 function loadBlueprint() {
+  const file = getBlueprintFile();
+  if (!fs.existsSync(file)) return null;
+
+  let data;
   try {
-    const file = getBlueprintFile();
-    if (!fs.existsSync(file)) return null;
-    const data = fs.readFileSync(file, 'utf8');
-    const parsed = JSON.parse(data);
-    if (!parsed || typeof parsed !== 'object') return null;
-    if (!parsed.center || typeof parsed.center.x !== 'number' || typeof parsed.center.y !== 'number' || typeof parsed.center.z !== 'number') {
-      return null;
-    }
-    if (!Array.isArray(parsed.requiredCoordinates) || !Array.isArray(parsed.verifiedCoordinates)) {
-      return null;
-    }
-    return parsed;
+    data = fs.readFileSync(file, 'utf8');
   } catch {
     return null;
   }
+
+  let parsed;
+  try {
+    parsed = JSON.parse(data);
+  } catch (err) {
+    const corruptFile = `${file}.corrupt-${Date.now()}`;
+    try { fs.renameSync(file, corruptFile); } catch {}
+    return null;
+  }
+
+  if (!parsed || typeof parsed !== 'object' ||
+      !parsed.center || typeof parsed.center.x !== 'number' ||
+      typeof parsed.center.y !== 'number' || typeof parsed.center.z !== 'number' ||
+      !Array.isArray(parsed.requiredCoordinates) || !Array.isArray(parsed.verifiedCoordinates)) {
+    const corruptFile = `${file}.corrupt-${Date.now()}`;
+    try { fs.renameSync(file, corruptFile); } catch {}
+    return null;
+  }
+
+  return parsed;
 }
 
 /**
@@ -398,9 +431,11 @@ function validateBlueprintIdentity(blueprint, bot, context = {}) {
   const currentDim = context.dimension || bot?.game?.dimension || 'overworld';
   if (blueprint.dimension && blueprint.dimension !== currentDim) isValid = false;
 
-  // 3. Verify server identity
+  // 3. Verify server identity (including port for LAN world separation)
+  const socketPort = bot?._client?.socket?.remotePort;
+  const socketAddr = bot?._client?.socket?.remoteAddress;
   const currentServer = context.server ||
-    bot?._client?.socket?.remoteAddress ||
+    (socketAddr && socketPort ? `${socketAddr}:${socketPort}` : socketAddr) ||
     (bot?._client?.host ? `${bot._client.host}:${bot._client.port || 25565}` : null);
   if (blueprint.server && currentServer && blueprint.server !== currentServer) isValid = false;
 
@@ -572,6 +607,14 @@ function checkExitSafety(bot, blueprint, exitDirection = null) {
   const ext1 = bot.blockAt ? bot.blockAt(new Vec3(cx + edx * 2, cy, cz + edz * 2)) : null;
   const ext2 = bot.blockAt ? bot.blockAt(new Vec3(cx + edx * 2, cy + 1, cz + edz * 2)) : null;
 
+  // Solid obstruction check in doorway clearance volume
+  if (ext1 && ext1.boundingBox === 'block') {
+    return { safe: false, reason: `solid_obstruction_outside_exit_${ext1.name}` };
+  }
+  if (ext2 && ext2.boundingBox === 'block') {
+    return { safe: false, reason: `solid_obstruction_outside_exit_${ext2.name}` };
+  }
+
   for (const b of [landing, ext1, ext2]) {
     if (b && isHazardousBlock(b.name)) {
       if (b.name.includes('water') || b.name.includes('lava')) {
@@ -588,15 +631,23 @@ function checkExitSafety(bot, blueprint, exitDirection = null) {
       if (!entity || !entity.position) continue;
       if (entity === bot.entity) continue;
 
-      // Hostile threat check within 8m of exit
       const type = entity.name || entity.type;
-      const isHostile = ['zombie', 'skeleton', 'creeper', 'spider', 'witch', 'enderman'].includes(type);
-      if (isHostile && entity.position.distanceTo(extPos) <= 8.0) {
+      const isRanged = RANGED_HOSTILES.has(type);
+      const isMelee = MELEE_HOSTILES.has(type) || ALL_HOSTILES.has(type);
+      const dist = entity.position.distanceTo(extPos);
+
+      // Ranged hostiles threat check within 16m of exit
+      if (isRanged && dist <= 16.0) {
+        return { safe: false, reason: `hostile_threat_${type}_at_exit` };
+      }
+
+      // Melee hostiles threat check within 8m of exit
+      if (isMelee && dist <= 8.0) {
         return { safe: false, reason: `hostile_threat_${type}_at_exit` };
       }
 
       // Entity obstruction directly blocking exit doorway (passive mob, player, etc.)
-      if (entity.position.distanceTo(extPos) <= 1.3) {
+      if (dist <= 1.3) {
         return { safe: false, reason: 'entity_obstruction_at_exit' };
       }
     }
@@ -675,6 +726,9 @@ module.exports = {
   isReplaceableVegetation,
   isHazardousBlock,
   APPROVED_SHELTER_MATERIALS,
+  RANGED_HOSTILES,
+  MELEE_HOSTILES,
+  ALL_HOSTILES,
   BLUEPRINT_FILE,
 };
 
