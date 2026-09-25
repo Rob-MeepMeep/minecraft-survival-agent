@@ -880,7 +880,18 @@ class GoalPlanner {
 
         if (!simulatedState && bot) {
           const block = bot.blockAt(new Vec3(coord.x, coord.y, coord.z));
-          if (block && block.name === blueprint.material) {
+          const expectedMat = coord.expectedMaterial || blueprint.material;
+          const isApproved = block && (
+            block.name === expectedMat ||
+            (APPROVED_SHELTER_MATERIALS.has(block.name) && APPROVED_SHELTER_MATERIALS.has(expectedMat))
+          );
+
+          if (block && isApproved) {
+            if (block.name !== expectedMat) {
+              coord.expectedMaterial = block.name;
+              coord.material = block.name;
+              coord.substitutionReason = 'pre_existing_approved_material';
+            }
             blueprint.verifiedCoordinates.push(coordKey);
             saveBlueprint(blueprint);
             continue;
@@ -898,7 +909,7 @@ class GoalPlanner {
             };
           }
 
-          if (block && block.boundingBox === 'block' && block.name !== blueprint.material) {
+          if (block && block.boundingBox === 'block' && !isApproved) {
             blueprint.buildState = 'abandoned';
             saveBlueprint(blueprint);
             return {

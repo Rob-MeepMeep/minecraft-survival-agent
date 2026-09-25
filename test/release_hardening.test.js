@@ -314,3 +314,46 @@ test('P1-6: Shelter planner returns no_safe_material_source when dirt exists onl
   assert.equal(plan.status, 'failed');
   assert.equal(plan.reason, 'no_safe_material_source');
 });
+
+test('Regression: pre-existing grass_block at shelter coordinate does not trigger foreign_block_in_shelter_footprint failure', () => {
+  const center = new Vec3(10, 64, 20);
+  const bp = createShelterBlueprint(center, { x: 0, y: 0, z: 1 }, 'dirt', {
+    server: '127.0.0.1:55555',
+    dimension: 'overworld',
+  });
+  const firstCoord = bp.requiredCoordinates[0];
+
+  const tmpBpFile = path.join(process.cwd(), `.test_bp_grass_${Date.now()}.json`);
+  process.env.SHELTER_BLUEPRINT_PATH = tmpBpFile;
+
+  try {
+    saveBlueprint(bp);
+
+    const mockBot = createMockBot({
+      playerPos: new Vec3(10.5, 64, 20.5),
+      items: [{ name: 'dirt', count: 30 }],
+      blockAt: (pos) => {
+        if (pos.x === firstCoord.x && pos.y === firstCoord.y && pos.z === firstCoord.z) {
+          return { name: 'grass_block', boundingBox: 'block', position: new Vec3(pos.x, pos.y, pos.z) };
+        }
+        return { name: 'air', boundingBox: null, position: new Vec3(pos.x, pos.y, pos.z) };
+      },
+      time: { timeOfDay: 10500 },
+    });
+
+    const plan = GoalPlanner.planNextAction({
+      bot: mockBot,
+      goal: 'build_shelter',
+      currentBlueprint: bp,
+      failureTracker: new FailureTracker(),
+    });
+
+    // grass_block must be accepted as an approved shelter material matching dirt, not rejected as foreign_block
+    assert.notEqual(plan.status, 'failed');
+    assert.notEqual(plan.reason, 'foreign_block_in_shelter_footprint');
+  } finally {
+    delete process.env.SHELTER_BLUEPRINT_PATH;
+    try { if (fs.existsSync(tmpBpFile)) fs.unlinkSync(tmpBpFile); } catch {}
+  }
+});
+
