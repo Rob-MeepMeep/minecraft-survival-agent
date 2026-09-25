@@ -1,0 +1,205 @@
+{
+  "verdict": "STAGE_4_FAILED",
+  "passedGates": 5,
+  "totalGates": 11,
+  "totalAdvancingTicks": 231,
+  "durationSeconds": 12,
+  "finalVitals": {
+    "health": 20,
+    "food": 20,
+    "saturation": 5
+  },
+  "finalInventory": [],
+  "milestones": [],
+  "controllerMilestones": {
+    "woodenPickaxeAchieved": false,
+    "stonePickaxeAchieved": false,
+    "foodReserveAcquired": false,
+    "buildingReserveAcquired": false,
+    "shelterEnclosed": false,
+    "nightSurvived": false,
+    "dawnExitCompleted": false
+  },
+  "gates": [
+    {
+      "gate": "Zero Production Slash Commands",
+      "passed": true,
+      "detail": "Issued 0 slash commands"
+    },
+    {
+      "gate": "Zero Post-Boundary Harness Injections",
+      "passed": true,
+      "detail": "Harness issued zero commands after natural_run_started boundary"
+    },
+    {
+      "gate": "Zero Player Deaths",
+      "passed": false,
+      "detail": "Player survived with 20/20 HP"
+    },
+    {
+      "gate": "Continuous Game Tick Advancement",
+      "passed": false,
+      "detail": "231 continuous natural advancing ticks (>= 24000) without skips"
+    },
+    {
+      "gate": "Natural Resource Acquisition",
+      "passed": true,
+      "detail": "Zero /summon or /give; all materials acquired naturally from environment"
+    },
+    {
+      "gate": "30-Block Building Reserve",
+      "passed": false,
+      "detail": "Building reserve acquired before dusk"
+    },
+    {
+      "gate": "Complete Shelter Before Dusk (timeOfDay < 12000)",
+      "passed": false,
+      "detail": "Shelter enclosed and safety claimed before dusk"
+    },
+    {
+      "gate": "Night Enclosure Integrity Maintained",
+      "passed": false,
+      "detail": "Intact through night; 0 audits passed"
+    },
+    {
+      "gate": "Critical Starvation Avoidance",
+      "passed": true,
+      "detail": "Lowest hunger was 19/20 (well above critical 6)"
+    },
+    {
+      "gate": "Safe Dawn Exit",
+      "passed": false,
+      "detail": "Doorway cleared and safe exit executed at dawn"
+    },
+    {
+      "gate": "Progression Resumption",
+      "passed": true,
+      "detail": "Primary progression goal resumed following shelter exit"
+    }
+  ],
+  "metadata": {
+    "worldIdentity": "overworld",
+    "seed": null,
+    "minecraftVersion": "26.1",
+    "mineflayerVersion": "4.39.0",
+    "nodeVersion": "v24.18.0",
+    "worldAge": 23899,
+    "timeOfDay": 23898,
+    "biome": "plains",
+    "weather": "clear",
+    "difficulty": "normal",
+    "position": {
+      "x": 46.5,
+      "y": 90,
+      "z": 41.5
+    },
+    "health": 17.5,
+    "food": 20,
+    "saturation": 4,
+    "inventorySnapshot": [],
+    "nearbyEntities": [
+      {
+        "name": "chicken",
+        "distance": 20.1
+      },
+      {
+        "name": "zombie",
+        "distance": 14.3
+      },
+      {
+        "name": "creeper",
+        "distance": 23.5
+      },
+      {
+        "name": "skeleton",
+        "distance": 5.5
+      },
+      {
+        "name": "skeleton",
+        "distance": 5.3
+      },
+      {
+        "name": "creeper",
+        "distance": 13.7
+      },
+      {
+        "name": "item",
+        "distance": 19.3
+      }
+    ],
+    "nearbyResources": [
+      "vine",
+      "jungle_leaves",
+      "jungle_log",
+      "oak_leaves",
+      "bamboo",
+      "oak_log"
+    ],
+    "preflightResults": {
+      "command_attempted": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "timestamp": "2026-09-24T22:56:33.872Z"
+        },
+        {
+          "command": "/gamerule doMobSpawning true",
+          "timestamp": "2026-09-24T22:56:33.875Z"
+        },
+        {
+          "command": "/weather clear",
+          "timestamp": "2026-09-24T22:56:33.875Z"
+        },
+        {
+          "command": "/clear @s",
+          "timestamp": "2026-09-24T22:56:33.876Z"
+        }
+      ],
+      "command_accepted": [
+        {
+          "command": "/weather clear",
+          "response": "gamerule doMobSpawning true<--[HERE]",
+          "timestamp": "2026-09-24T22:56:33.875Z"
+        }
+      ],
+      "command_rejected": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-24T22:56:33.872Z"
+        },
+        {
+          "command": "/gamerule doMobSpawning true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-24T22:56:33.875Z"
+        },
+        {
+          "command": "/clear @s",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-24T22:56:33.876Z"
+        }
+      ],
+      "server_response": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-24T22:56:33.872Z"
+        },
+        {
+          "command": "/gamerule doMobSpawning true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-24T22:56:33.875Z"
+        },
+        {
+          "command": "/weather clear",
+          "response": "gamerule doMobSpawning true<--[HERE]",
+          "timestamp": "2026-09-24T22:56:33.875Z"
+        },
+        {
+          "command": "/clear @s",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-24T22:56:33.876Z"
+        }
+      ]
+    }
+  }
+}
