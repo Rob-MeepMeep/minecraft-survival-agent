@@ -410,6 +410,23 @@ function clearBlueprint() {
 }
 
 /**
+ * Computes a normalized server fingerprint (host:port) for LAN world separation.
+ *
+ * @param {import('mineflayer').Bot} bot
+ * @param {object} [context={}]
+ * @returns {string}
+ */
+function getServerFingerprint(bot, context = {}) {
+  if (context.server) return context.server;
+  const socketPort = bot?._client?.socket?.remotePort;
+  const socketAddr = bot?._client?.socket?.remoteAddress;
+  if (socketAddr && socketPort) return `${socketAddr}:${socketPort}`;
+  if (socketAddr) return socketAddr;
+  if (bot?._client?.host) return `${bot._client.host}:${bot._client.port || 25565}`;
+  return 'localhost:25565';
+}
+
+/**
  * Validates blueprint identity against the active session, world, dimension, server, version, and player vitality.
  *
  * @param {object} blueprint
@@ -432,11 +449,7 @@ function validateBlueprintIdentity(blueprint, bot, context = {}) {
   if (blueprint.dimension && blueprint.dimension !== currentDim) isValid = false;
 
   // 3. Verify server identity (including port for LAN world separation)
-  const socketPort = bot?._client?.socket?.remotePort;
-  const socketAddr = bot?._client?.socket?.remoteAddress;
-  const currentServer = context.server ||
-    (socketAddr && socketPort ? `${socketAddr}:${socketPort}` : socketAddr) ||
-    (bot?._client?.host ? `${bot._client.host}:${bot._client.port || 25565}` : null);
+  const currentServer = getServerFingerprint(bot, context);
   if (blueprint.server && currentServer && blueprint.server !== currentServer) isValid = false;
 
   // 4. Verify world identity
@@ -720,6 +733,7 @@ module.exports = {
   loadBlueprint,
   clearBlueprint,
   validateBlueprintIdentity,
+  getServerFingerprint,
   auditEnclosure,
   checkExitSafety,
   findAlternativeSafeExit,

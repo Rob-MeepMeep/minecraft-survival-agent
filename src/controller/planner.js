@@ -188,6 +188,7 @@ const {
   saveBlueprint,
   loadBlueprint,
   validateBlueprintIdentity,
+  getServerFingerprint,
   auditEnclosure,
   checkExitSafety,
   isReplaceableVegetation,
@@ -773,7 +774,7 @@ class GoalPlanner {
         }
 
         blueprint = createShelterBlueprint(siteResult.center, siteResult.exitDirection, 'dirt', {
-          server: bot?._client?.socket?.remoteAddress || 'localhost:25565',
+          server: getServerFingerprint(bot),
           dimension: bot?.game?.dimension || 'overworld',
           mcVersion: bot?.version || '1.20',
         });
