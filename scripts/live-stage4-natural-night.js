@@ -21,10 +21,12 @@
  *   - Progression resumption
  *   - At least 24,000 naturally advancing ticks
  *   - Structured milestone log (timestamp, worldAge, timeOfDay, delta, modular TOD, drift, pos, vitals, goal, stackDepth)
+ *   - Every run writes immutable evidence keyed by run ID and source commit SHA.
  */
 
 const fs = require('fs');
 const path = require('path');
+const { execSync } = require('child_process');
 const { Vec3 } = require('vec3');
 
 const { loadConfig } = require('../src/config');
@@ -108,7 +110,7 @@ async function probeServerTime(config) {
 }
 
 async function syncWithNaturalDawn(config) {
-  log('Checking server time for natural morning start window (timeOfDay <= 1500)...');
+  log('Checking server time for natural morning start window (timeOfDay 500..2000)...');
   while (true) {
     let probe;
     try {
@@ -150,18 +152,48 @@ async function runStage4Verification() {
   console.log('🚀 STAGE 4: Final Fresh-World Resource-Clean Survival Verification');
   console.log('========================================================================\n');
 
+  // Capture git commit for immutable evidence
+  let gitCommit = 'unknown';
+  try {
+    gitCommit = execSync('git rev-parse HEAD', { encoding: 'utf8' }).trim();
+  } catch {
+    gitCommit = 'git-unavailable';
+  }
+
+  const runId = `stage4-${Date.now()}`;
+  const runArtifactsDir = path.join(process.cwd(), 'artifacts', 'stage4-runs', runId);
+  fs.mkdirSync(runArtifactsDir, { recursive: true });
+
+  // Tee console output into transcript buffer
+  const transcript = [];
+  const origStdoutWrite = process.stdout.write.bind(process.stdout);
+  const origStderrWrite = process.stderr.write.bind(process.stderr);
+
+  process.stdout.write = (chunk, encoding, cb) => {
+    transcript.push(chunk.toString());
+    return origStdoutWrite(chunk, encoding, cb);
+  };
+  process.stderr.write = (chunk, encoding, cb) => {
+    transcript.push(chunk.toString());
+    return origStderrWrite(chunk, encoding, cb);
+  };
+
+  log(`Run ID: ${runId}`);
+  log(`Source Commit: ${gitCommit}`);
+  log(`Evidence Directory: ${runArtifactsDir}`);
+
   const config = loadConfig();
 
   // 1. Sync with natural dawn offline before launching agent
   await syncWithNaturalDawn(config);
 
-  const runId = `stage4-clean-${Date.now()}`;
   const telemetry = createTelemetry(runId);
   const agent = createAgent(config, telemetry);
   const { bot } = agent;
 
   let productionSlashCommands = 0;
   let harnessSlashCommands = 0;
+  let harnessSlashCommandsPostBoundary = 0;
   let isHarnessCalling = false;
   let runStarted = false;
   let originalChat = null;
@@ -176,6 +208,7 @@ async function runStage4Verification() {
             console.error(`🚨 VIOLATION: Production code issued slash command: "${msg}"`);
           } else {
             if (runStarted) {
+              harnessSlashCommandsPostBoundary++;
               console.error(`🚨 VIOLATION: Harness issued slash command after runStarted: "${msg}"`);
               process.exit(1);
             }
@@ -204,7 +237,7 @@ async function runStage4Verification() {
   const eater = createEater(bot, actionManager);
   const placer = createPlacer(bot, actionManager);
   const attacker = createAttacker(bot, actionManager);
-  const failureTracker = new FailureTracker({ maxDispatchedActions: 500 });
+  const failureTracker = new FailureTracker({ maxDispatchedActions: 500, maxDispatchedPerGoal: 150 });
 
   const survivalController = new SurvivalController({
     bot,
@@ -342,11 +375,14 @@ async function runStage4Verification() {
   }
 
   const metadata = {
+    runId,
+    sourceCommit: gitCommit,
     worldIdentity: bot.game?.dimension || 'overworld',
     seed: null,
     minecraftVersion: bot.version || '26.1',
     mineflayerVersion: require('mineflayer/package.json').version,
     nodeVersion: process.version,
+    server: `${config.host || 'localhost'}:${config.port || 25565}`,
     worldAge: startAge,
     timeOfDay: startTod,
     biome,
@@ -376,6 +412,8 @@ async function runStage4Verification() {
     timestamp: new Date().toISOString(),
     startAge,
     startTimeOfDay: startTod,
+    runId,
+    sourceCommit: gitCommit,
     metadata,
   });
 
@@ -454,7 +492,7 @@ async function runStage4Verification() {
     }
   });
 
-  // Telemetry listener for milestones
+  // Telemetry listener for milestones & causal derivation
   const origEmit = telemetry.emit.bind(telemetry);
   telemetry.emit = (evt) => {
     origEmit(evt);
@@ -499,9 +537,20 @@ async function runStage4Verification() {
       }
     }
 
+    // Progression resumption must occur after dawn exit
     if (evt.event === 'controller_goal_resumed' && (evt.goal === 'stone_pickaxe' || evt.goal === 'wooden_pickaxe')) {
-      progressionResumedVerified = true;
-      log(`Progression resumed after shelter: goal=${evt.goal}`);
+      if (dawnExitVerified || survivalController.milestones.dawnExitCompleted) {
+        progressionResumedVerified = true;
+        log(`Progression causally resumed post-shelter: goal=${evt.goal}`);
+      }
+    }
+
+    if (evt.event === 'controller_intent' && (evt.action === 'gather' || evt.action === 'navigate' || evt.action === 'craft') &&
+        (survivalController.currentGoal === 'stone_pickaxe' || survivalController.currentGoal === 'wooden_pickaxe')) {
+      if (dawnExitVerified || survivalController.milestones.dawnExitCompleted) {
+        progressionResumedVerified = true;
+        log(`Progression action dispatched post-shelter: action=${evt.action}, goal=${survivalController.currentGoal}`);
+      }
     }
   };
 
@@ -575,22 +624,72 @@ async function runStage4Verification() {
   }
 
   // -------------------------------------------------------------------------
-  // Invariant Evaluation & Gate Results
+  // Causal Gate Derivation from Post-Boundary Telemetry
   // -------------------------------------------------------------------------
   console.log('\n========================================================================');
   console.log('📋 STAGE 4 VERIFICATION RESULTS');
   console.log('========================================================================\n');
 
+  const buildingReserveMilestone = milestonesRecorded.find(m => m.milestone === 'building_reserve_acquired');
+  const shelterEnclosedMilestone = milestonesRecorded.find(m => m.milestone === 'shelter_enclosed');
+  const nightSurvivedMilestone = milestonesRecorded.find(m => m.milestone === 'night_survived');
+  const dawnExitMilestone = milestonesRecorded.find(m => m.milestone === 'dawn_exit_completed');
+
+  // Gate 5: Natural Resource Acquisition
+  const zeroHarnessIntervention = harnessSlashCommandsPostBoundary === 0;
+  const zeroProductionSlashCommands = productionSlashCommands === 0;
+  const preflightClean = preflightResults.command_attempted.every(
+    c => !c.command.includes('/summon') && !c.command.includes('/give') && !c.command.includes('/tp')
+  );
+  const naturalAcquisitionPassed = zeroHarnessIntervention && zeroProductionSlashCommands && preflightClean;
+
+  // Gate 6: 30-Block Building Reserve (causally before dusk)
+  const reserveAcquiredPassed = Boolean(
+    buildingReserveMilestone &&
+    buildingReserveMilestone.worldAge >= startAge &&
+    buildingReserveMilestone.timeOfDay < SHELTER_DEADLINE
+  );
+
+  // Gate 7: Complete Shelter Before Dusk (causally after reserve and before 12000)
+  const shelterEnclosedPassed = Boolean(
+    shelterEnclosedMilestone &&
+    shelterEnclosedMilestone.worldAge >= startAge &&
+    shelterEnclosedMilestone.timeOfDay < SHELTER_DEADLINE &&
+    (shelterEnclosedBeforeDusk || survivalController.milestones.shelterEnclosed)
+  );
+
+  // Gate 8: Night Enclosure Integrity Maintained (causally after enclosed and survived night)
+  const nightEnclosurePassed = Boolean(
+    shelterEnclosedPassed &&
+    !enclosureBreached &&
+    !survivalController.breachDetected &&
+    nightEnclosureAuditsPassed >= 50 &&
+    nightSurvivedMilestone !== undefined
+  );
+
+  // Gate 10: Safe Dawn Exit (causally after night survived)
+  const dawnExitPassed = Boolean(
+    nightEnclosurePassed &&
+    dawnExitMilestone &&
+    (dawnExitVerified || survivalController.milestones.dawnExitCompleted)
+  );
+
+  // Gate 11: Progression Resumption (causally after dawn exit)
+  const progressionResumedPassed = Boolean(
+    dawnExitPassed &&
+    progressionResumedVerified
+  );
+
   const gates = [
     {
       gate: 'Zero Production Slash Commands',
-      passed: productionSlashCommands === 0,
-      detail: `Issued ${productionSlashCommands} slash commands`,
+      passed: zeroProductionSlashCommands,
+      detail: `Issued ${productionSlashCommands} production slash commands (must be 0)`,
     },
     {
       gate: 'Zero Post-Boundary Harness Injections',
-      passed: harnessSlashCommands === preflightResults.command_attempted.length,
-      detail: `Harness issued zero commands after natural_run_started boundary`,
+      passed: zeroHarnessIntervention,
+      detail: `Harness issued ${harnessSlashCommandsPostBoundary} commands after natural_run_started boundary (must be 0)`,
     },
     {
       gate: 'Zero Player Deaths',
@@ -604,38 +703,46 @@ async function runStage4Verification() {
     },
     {
       gate: 'Natural Resource Acquisition',
-      passed: true,
-      detail: 'Zero /summon or /give; all materials acquired naturally from environment',
+      passed: naturalAcquisitionPassed,
+      detail: `Derived from telemetry: 0 /give or /summon, 0 harness injections, all resources gathered from world blocks/drops`,
     },
     {
       gate: '30-Block Building Reserve',
-      passed: survivalController.milestones.buildingReserveAcquired || getExpendableBuildingBlocks(bot.inventory.items()) >= 30,
-      detail: 'Building reserve acquired before dusk',
+      passed: reserveAcquiredPassed,
+      detail: buildingReserveMilestone
+        ? `Building reserve achieved at worldAge=${buildingReserveMilestone.worldAge}, TOD=${buildingReserveMilestone.timeOfDay} (< ${SHELTER_DEADLINE})`
+        : 'Building reserve milestone not verified before dusk',
     },
     {
       gate: 'Complete Shelter Before Dusk (timeOfDay < 12000)',
-      passed: shelterEnclosedBeforeDusk || survivalController.milestones.shelterEnclosed,
-      detail: 'Shelter enclosed and safety claimed before dusk',
+      passed: shelterEnclosedPassed,
+      detail: shelterEnclosedMilestone
+        ? `Shelter enclosed at worldAge=${shelterEnclosedMilestone.worldAge}, TOD=${shelterEnclosedMilestone.timeOfDay} (< ${SHELTER_DEADLINE})`
+        : 'Shelter enclosed milestone not verified before dusk',
     },
     {
       gate: 'Night Enclosure Integrity Maintained',
-      passed: !enclosureBreached && nightEnclosureAuditsPassed > 0,
-      detail: `Intact through night; ${nightEnclosureAuditsPassed} audits passed`,
+      passed: nightEnclosurePassed,
+      detail: `Intact through night; ${nightEnclosureAuditsPassed} audits passed, zero breaches detected`,
     },
     {
       gate: 'Critical Starvation Avoidance',
       passed: maxHungerDrop > 6,
-      detail: `Lowest hunger was ${maxHungerDrop}/20 (well above critical 6)`,
+      detail: `Lowest hunger was ${maxHungerDrop}/20 (maintained above critical threshold 6)`,
     },
     {
       gate: 'Safe Dawn Exit',
-      passed: dawnExitVerified || survivalController.milestones.dawnExitCompleted,
-      detail: 'Doorway cleared and safe exit executed at dawn',
+      passed: dawnExitPassed,
+      detail: dawnExitMilestone
+        ? `Dawn exit executed at worldAge=${dawnExitMilestone.worldAge}, TOD=${dawnExitMilestone.timeOfDay}`
+        : 'Dawn exit milestone not verified post-night',
     },
     {
       gate: 'Progression Resumption',
-      passed: progressionResumedVerified || survivalController.currentGoal === 'stone_pickaxe' || survivalController.milestones.dawnExitCompleted,
-      detail: 'Primary progression goal resumed following shelter exit',
+      passed: progressionResumedPassed,
+      detail: progressionResumedPassed
+        ? 'Daytime progression goal causally resumed and action dispatched post-exit'
+        : 'Progression resumption not verified following dawn exit',
     },
   ];
 
@@ -651,6 +758,8 @@ async function runStage4Verification() {
 
   const allPassed = passedGates === gates.length;
   const finalSummary = {
+    runId,
+    sourceCommit: gitCommit,
     verdict: allPassed ? 'STAGE_4_ACCEPTED' : 'STAGE_4_FAILED',
     passedGates,
     totalGates: gates.length,
@@ -664,9 +773,35 @@ async function runStage4Verification() {
     metadata,
   };
 
-  const resultsPath = path.join(process.cwd(), 'stage4_live_results.json');
-  fs.writeFileSync(resultsPath, JSON.stringify(finalSummary, null, 2), 'utf8');
-  log(`Final telemetry results written to: ${resultsPath}`);
+  // Write immutable evidence files
+  try {
+    await telemetry.close();
+  } catch (err) {
+    console.error('Warning: Error closing telemetry stream:', err.message);
+  }
+
+  // 1. Copy telemetry JSONL into immutable artifacts directory
+  try {
+    const rawTelemetryPath = telemetry.getFilePath();
+    if (fs.existsSync(rawTelemetryPath)) {
+      fs.copyFileSync(rawTelemetryPath, path.join(runArtifactsDir, 'telemetry.jsonl'));
+    }
+  } catch (err) {
+    console.error('Failed copying telemetry to run artifact directory:', err.message);
+  }
+
+  // 2. Write immutable result.json, transcript.txt, metadata.json
+  fs.writeFileSync(path.join(runArtifactsDir, 'result.json'), JSON.stringify(finalSummary, null, 2), 'utf8');
+  fs.writeFileSync(path.join(runArtifactsDir, 'metadata.json'), JSON.stringify(metadata, null, 2), 'utf8');
+  fs.writeFileSync(path.join(runArtifactsDir, 'transcript.txt'), transcript.join(''), 'utf8');
+
+  // 3. Update root stage4_live_results.json with pointer to immutable artifact
+  finalSummary.evidencePath = path.relative(process.cwd(), runArtifactsDir);
+  const rootResultsPath = path.join(process.cwd(), 'stage4_live_results.json');
+  fs.writeFileSync(rootResultsPath, JSON.stringify(finalSummary, null, 2), 'utf8');
+
+  log(`Immutable evidence written to: ${runArtifactsDir}`);
+  log(`Updated root results: ${rootResultsPath}`);
 
   console.log('\n========================================================================');
   console.log(`🏁 VERDICT: ${finalSummary.verdict} (${passedGates}/${gates.length} Gates Passed)`);

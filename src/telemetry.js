@@ -60,13 +60,23 @@ function createTelemetry(runId) {
     console.log(`[${ts}] ${tag}${detail ? '  ' + detail : ''}`);
   }
 
-  function close() {
+  let streamError = null;
+  stream.on('error', (err) => {
+    streamError = err;
+  });
+
+  async function close() {
     if (closed) return;
     closed = true;
-    stream.end();
+    return new Promise((resolve, reject) => {
+      stream.end(() => {
+        if (streamError) reject(streamError);
+        else resolve();
+      });
+    });
   }
 
-  return { emit, close };
+  return { emit, close, getFilePath: () => filePath, getError: () => streamError };
 }
 
 /**
