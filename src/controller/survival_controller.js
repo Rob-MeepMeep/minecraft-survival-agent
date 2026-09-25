@@ -89,7 +89,7 @@ function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 1
   const baseAngle = Math.atan2(awayZ / awayLen, awayX / awayLen);
 
   const angleOffsets = [0, 0.44, -0.44, 0.87, -0.87, 1.3, -1.3];
-  const distances = [maxFleeDist, 16, (minFleeDist + maxFleeDist) / 2, 14, minFleeDist];
+  const distances = [minFleeDist, 14, (minFleeDist + maxFleeDist) / 2, 16, maxFleeDist];
 
   for (const dist of distances) {
     for (const ang of angleOffsets) {
@@ -105,6 +105,7 @@ function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 1
         const headBlock = bot.blockAt ? bot.blockAt(new Vec3(targetX, floorY + 2, targetZ)) : null;
 
         if (!floorBlock || floorBlock.boundingBox !== 'block') continue;
+        if (floorBlock.name.endsWith('_leaves') || floorBlock.name === 'leaves') continue;
         if (['water', 'flowing_water', 'lava', 'flowing_lava'].includes(floorBlock.name)) continue;
         if (bodyBlock && ['water', 'flowing_water', 'lava', 'flowing_lava'].includes(bodyBlock.name)) continue;
         if (headBlock && ['water', 'flowing_water', 'lava', 'flowing_lava'].includes(headBlock.name)) continue;
@@ -675,9 +676,9 @@ class SurvivalController {
         });
         try {
           if (this.primitives.navigator.goto) {
-            await this.primitives.navigator.goto({ x: safeTarget.x, y: safeTarget.y, z: safeTarget.z, range: 2.0 }, 15000);
+            await this.primitives.navigator.goto({ x: safeTarget.x, y: safeTarget.y, z: safeTarget.z, range: 2.0 }, 6000);
           } else if (this.primitives.navigator.navigate) {
-            await this.primitives.navigator.navigate(safeTarget.x, safeTarget.y, safeTarget.z, 2.0);
+            await this.primitives.navigator.navigate(safeTarget.x, safeTarget.y, safeTarget.z, 2.0, 6000);
           }
         } catch (err) {
           this.telemetry?.emit({
@@ -1260,6 +1261,35 @@ class SurvivalController {
         this.currentGoal = restored.goal;
         this._scheduleTick(0, runId);
         return;
+      }
+
+      if (this.currentGoal === 'stone_pickaxe' && plan.reason === 'no_exposed_stone_found') {
+        const expendable = getExpendableBuildingBlocks(items);
+        if (expendable < (this.options.targetReserve || 30)) {
+          this.currentGoal = 'maintain_building_reserve';
+          this.telemetry?.emit({
+            event: 'controller_goal_switched',
+            controllerRunId: runId,
+            generation: this.generation,
+            from: 'stone_pickaxe',
+            to: 'maintain_building_reserve',
+            reason: 'stone_blocked_gathering_building_reserve',
+          });
+          this._scheduleTick(0, runId);
+          return;
+        } else {
+          this.currentGoal = 'build_shelter';
+          this.telemetry?.emit({
+            event: 'controller_goal_switched',
+            controllerRunId: runId,
+            generation: this.generation,
+            from: 'stone_pickaxe',
+            to: 'build_shelter',
+            reason: 'stone_blocked_reserve_met_building_shelter',
+          });
+          this._scheduleTick(0, runId);
+          return;
+        }
       }
 
       this.telemetry?.emit({

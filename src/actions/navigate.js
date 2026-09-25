@@ -164,6 +164,26 @@ function createNavigator(bot, actionManager) {
       bot.pathfinder.setMovements(getMovements());
       const goal = new goals.GoalNear(target.x, target.y, target.z, requestedRange);
 
+      let lastPos = bot.entity?.position ? bot.entity.position.clone() : null;
+      let lastMoveTime = Date.now();
+      const stuckCheck = setInterval(() => {
+        if (signal.aborted) {
+          clearInterval(stuckCheck);
+          return;
+        }
+        const curr = bot.entity?.position;
+        if (curr && lastPos) {
+          const moved = distance3D(curr, lastPos);
+          if (moved > 0.5) {
+            lastMoveTime = Date.now();
+            lastPos = curr.clone();
+          } else if (Date.now() - lastMoveTime > 4000) {
+            clearInterval(stuckCheck);
+            try { bot.pathfinder.stop(); } catch {}
+          }
+        }
+      }, 500);
+
       try {
         await bot.pathfinder.goto(goal);
       } catch (err) {
@@ -185,6 +205,8 @@ function createNavigator(bot, actionManager) {
             maxAcceptableDistance,
           },
         };
+      } finally {
+        clearInterval(stuckCheck);
       }
 
       // Postcondition verification: check measured distance against maxAcceptableDistance

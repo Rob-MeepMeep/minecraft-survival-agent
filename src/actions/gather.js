@@ -280,11 +280,13 @@ function findSafeBlock(bot, matcher, maxDistance = 16, failureTracker = null, op
 
     // Elevation & Anti-trenching constraints:
     if (bot.entity?.position) {
-      const botGroundY = Math.floor(bot.entity.position.y);
-      const dy = b.position.y - botGroundY;
-      // Never mine two levels below player (dy <= -2 creates trenches)
-      // Only permit surface dirt around current elevation: foot level (dy = -1), waist (dy = 0), chest (dy = 1)
-      if (dy < -1 || dy > 1) return false;
+      const horizDist = Math.hypot(b.position.x - bot.entity.position.x, b.position.z - bot.entity.position.z);
+      // For adjacent blocks (within 2m of player), don't dig trenches below foot level (dy < -1)
+      if (horizDist <= 2.0) {
+        const botGroundY = Math.floor(bot.entity.position.y);
+        const dy = b.position.y - botGroundY;
+        if (dy < -1) return false;
+      }
     }
 
     // Anti-trenching column tracking: prevent repeated mining at the same (x, z) column
