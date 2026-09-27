@@ -345,47 +345,34 @@ async function runStage4Verification() {
   for (let attempt = 0; attempt < 3; attempt++) {
     const items = bot.inventory.items();
     if (items.length === 0) break;
+    const dropPos = bot.entity.position.clone();
     for (const item of items) {
       try { await bot.tossStack(item); } catch {}
     }
-    // Step away 5 blocks so player does not vacuum back discarded items when pickup delay expires
+    // Navigate away from drop point using GoalInvert so player does not vacuum back discarded items
     try {
       const movements = new Movements(bot);
       movements.canDig = false;
+      movements.scafoldingBlocks = [];
+      movements.allow1by1towers = false;
       bot.pathfinder.setMovements(movements);
-      let targetPos = null;
-      for (const [dx, dz] of [[5, 0], [-5, 0], [0, 5], [0, -5], [4, 4], [-4, -4]]) {
-        const dest = bot.entity.position.offset(dx, 0, dz);
-        const blockBelow = bot.blockAt(dest.offset(0, -1, 0));
-        const blockAt = bot.blockAt(dest);
-        const blockAbove = bot.blockAt(dest.offset(0, 1, 0));
-        if (blockBelow && blockBelow.boundingBox === 'block' && blockAt && blockAt.boundingBox === 'empty' && blockAbove && blockAbove.boundingBox === 'empty') {
-          targetPos = dest;
-          break;
-        }
-      }
-      if (targetPos) {
-        let timer;
-        const timeoutPromise = new Promise((_, reject) => {
-          timer = setTimeout(() => {
-            try { bot.pathfinder.stop(); } catch {}
-            reject(new Error('Navigation timed out'));
-          }, 4000);
-        });
-        await Promise.race([
-          bot.pathfinder.goto(new goals.GoalNear(targetPos.x, targetPos.y, targetPos.z, 1.0)),
-          timeoutPromise,
-        ]).finally(() => clearTimeout(timer));
-      } else {
-        bot.setControlState('back', true);
-        await wait(1200);
-        bot.setControlState('back', false);
-      }
+      const fleeGoal = new goals.GoalInvert(new goals.GoalNear(dropPos.x, dropPos.y, dropPos.z, 5.0));
+      let timer;
+      const timeoutPromise = new Promise((_, reject) => {
+        timer = setTimeout(() => {
+          try { bot.pathfinder.stop(); } catch {}
+          reject(new Error('Navigation timed out'));
+        }, 6000);
+      });
+      await Promise.race([
+        bot.pathfinder.goto(fleeGoal),
+        timeoutPromise,
+      ]).finally(() => clearTimeout(timer));
     } catch (e) {
       log(`Preflight step-away notice: ${e.message}`);
     }
     // Wait for pickup delay to completely expire (> 40 ticks = 2000ms)
-    await wait(2200);
+    await wait(2500);
   }
   await wait(500);
 
