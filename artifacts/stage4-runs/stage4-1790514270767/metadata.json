@@ -1,0 +1,170 @@
+{
+  "runId": "stage4-1790514270767",
+  "sourceCommit": "0532f86381d387fe708727c99713d600d32931c2",
+  "worldIdentity": "overworld",
+  "seed": null,
+  "minecraftVersion": "26.1",
+  "mineflayerVersion": "4.39.0",
+  "nodeVersion": "v24.18.0",
+  "server": "localhost:61375",
+  "worldAge": 216819,
+  "timeOfDay": 817,
+  "biome": "plains",
+  "weather": "clear",
+  "difficulty": "normal",
+  "position": {
+    "x": -137.5,
+    "y": 61,
+    "z": 105.7
+  },
+  "health": 18.333332061767578,
+  "food": 17,
+  "saturation": 0,
+  "inventorySnapshot": [
+    {
+      "name": "birch_log",
+      "count": 1
+    },
+    {
+      "name": "dirt",
+      "count": 16
+    },
+    {
+      "name": "cobblestone",
+      "count": 1
+    },
+    {
+      "name": "birch_planks",
+      "count": 3
+    },
+    {
+      "name": "stone_pickaxe",
+      "count": 1
+    }
+  ],
+  "nearbyEntities": [
+    {
+      "name": "spider",
+      "distance": 29.4
+    },
+    {
+      "name": "spider",
+      "distance": 26.4
+    },
+    {
+      "name": "creeper",
+      "distance": 20
+    },
+    {
+      "name": "bat",
+      "distance": 28.4
+    },
+    {
+      "name": "bat",
+      "distance": 28.8
+    },
+    {
+      "name": "spider",
+      "distance": 29.8
+    },
+    {
+      "name": "skeleton",
+      "distance": 25.6
+    },
+    {
+      "name": "spider",
+      "distance": 27.6
+    },
+    {
+      "name": "zombie",
+      "distance": 13.8
+    },
+    {
+      "name": "zombie",
+      "distance": 9.9
+    },
+    {
+      "name": "zombie",
+      "distance": 10.9
+    }
+  ],
+  "nearbyResources": [
+    "stone",
+    "gravel",
+    "dirt",
+    "grass_block",
+    "short_grass",
+    "copper_ore",
+    "granite",
+    "sandstone",
+    "crafting_table",
+    "sand",
+    "water"
+  ],
+  "preflightResults": {
+    "command_attempted": [
+      {
+        "command": "/gamerule doDaylightCycle true",
+        "timestamp": "2026-09-27T13:16:51.670Z"
+      },
+      {
+        "command": "/gamerule doMobSpawning true",
+        "timestamp": "2026-09-27T13:16:51.671Z"
+      },
+      {
+        "command": "/weather clear",
+        "timestamp": "2026-09-27T13:16:51.672Z"
+      },
+      {
+        "command": "/clear @s",
+        "timestamp": "2026-09-27T13:16:51.672Z"
+      }
+    ],
+    "command_accepted": [
+      {
+        "command": "/gamerule doMobSpawning true",
+        "response": "gamerule doDaylightCycle true<--[HERE]",
+        "timestamp": "2026-09-27T13:16:51.671Z"
+      }
+    ],
+    "command_rejected": [
+      {
+        "command": "/gamerule doDaylightCycle true",
+        "response": "Unknown or incomplete command. See below for error",
+        "timestamp": "2026-09-27T13:16:51.670Z"
+      },
+      {
+        "command": "/weather clear",
+        "response": "Unknown or incomplete command. See below for error",
+        "timestamp": "2026-09-27T13:16:51.672Z"
+      },
+      {
+        "command": "/clear @s",
+        "response": "Unknown or incomplete command. See below for error",
+        "timestamp": "2026-09-27T13:16:51.672Z"
+      }
+    ],
+    "server_response": [
+      {
+        "command": "/gamerule doDaylightCycle true",
+        "response": "Unknown or incomplete command. See below for error",
+        "timestamp": "2026-09-27T13:16:51.670Z"
+      },
+      {
+        "command": "/gamerule doMobSpawning true",
+        "response": "gamerule doDaylightCycle true<--[HERE]",
+        "timestamp": "2026-09-27T13:16:51.671Z"
+      },
+      {
+        "command": "/weather clear",
+        "response": "Unknown or incomplete command. See below for error",
+        "timestamp": "2026-09-27T13:16:51.672Z"
+      },
+      {
+        "command": "/clear @s",
+        "response": "Unknown or incomplete command. See below for error",
+        "timestamp": "2026-09-27T13:16:51.672Z"
+      }
+    ]
+  }
+}

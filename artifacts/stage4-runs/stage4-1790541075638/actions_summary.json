@@ -1,0 +1,16 @@
+{
+  "totalAttempted": 81,
+  "succeeded": 79,
+  "failed": 2,
+  "actions": {
+    "navigate": 12,
+    "gather": 38,
+    "craft": 5,
+    "equip": 1,
+    "place": 25
+  },
+  "failures": {
+    "navigate:Exceeded timeout of 6000ms": 1,
+    "gather:drop_not_collected": 1
+  }
+}

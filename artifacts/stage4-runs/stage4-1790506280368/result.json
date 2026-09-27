@@ -1,0 +1,263 @@
+{
+  "runId": "stage4-1790506280368",
+  "sourceCommit": "fffaf1dccfd6ce8dd6c863bc2408152ea98570c7",
+  "verdict": "STAGE_4_FAILED",
+  "passedGates": 4,
+  "totalGates": 11,
+  "totalAdvancingTicks": 1072,
+  "durationSeconds": 54,
+  "finalVitals": {
+    "health": 20,
+    "food": 20,
+    "saturation": 5
+  },
+  "finalInventory": [],
+  "milestones": [
+    {
+      "milestone": "wooden_pickaxe",
+      "timestamp": "2026-09-27T10:57:16.352Z",
+      "worldAge": 49099,
+      "timeOfDay": 1098,
+      "worldAgeDelta": 460,
+      "expectedModularTimeOfDay": 1098,
+      "drift": 0,
+      "position": {
+        "x": -164.5,
+        "y": 61.3,
+        "z": 68.6
+      },
+      "vitals": {
+        "health": 20,
+        "food": 20,
+        "saturation": 5
+      },
+      "currentGoal": "stone_pickaxe",
+      "goalStackDepth": 0
+    }
+  ],
+  "controllerMilestones": {
+    "woodenPickaxeAchieved": true,
+    "stonePickaxeAchieved": false,
+    "foodReserveAcquired": false,
+    "buildingReserveAcquired": false,
+    "shelterEnclosed": false,
+    "nightSurvived": false,
+    "dawnExitCompleted": false
+  },
+  "gates": [
+    {
+      "gate": "Zero Production Slash Commands",
+      "passed": true,
+      "detail": "Issued 0 production slash commands (must be 0)"
+    },
+    {
+      "gate": "Zero Post-Boundary Harness Injections",
+      "passed": true,
+      "detail": "Harness issued 0 commands after natural_run_started boundary (must be 0)"
+    },
+    {
+      "gate": "Zero Player Deaths",
+      "passed": false,
+      "detail": "Player survived with 20/20 HP"
+    },
+    {
+      "gate": "Continuous Game Tick Advancement",
+      "passed": false,
+      "detail": "1072 continuous natural advancing ticks (>= 24000) without skips"
+    },
+    {
+      "gate": "Natural Resource Acquisition",
+      "passed": true,
+      "detail": "Derived from telemetry: 0 /give or /summon, 0 harness injections, all resources gathered from world blocks/drops"
+    },
+    {
+      "gate": "30-Block Building Reserve",
+      "passed": false,
+      "detail": "Building reserve milestone not verified before dusk"
+    },
+    {
+      "gate": "Complete Shelter Before Dusk (timeOfDay < 12000)",
+      "passed": false,
+      "detail": "Shelter enclosed milestone not verified before dusk"
+    },
+    {
+      "gate": "Night Enclosure Integrity Maintained",
+      "passed": false,
+      "detail": "Intact through night; 0 audits passed, zero breaches detected"
+    },
+    {
+      "gate": "Critical Starvation Avoidance",
+      "passed": true,
+      "detail": "Lowest hunger was 19/20 (maintained above critical threshold 6)"
+    },
+    {
+      "gate": "Safe Dawn Exit",
+      "passed": false,
+      "detail": "Dawn exit milestone not verified post-night"
+    },
+    {
+      "gate": "Progression Resumption",
+      "passed": false,
+      "detail": "Progression resumption not verified following dawn exit"
+    }
+  ],
+  "metadata": {
+    "runId": "stage4-1790506280368",
+    "sourceCommit": "fffaf1dccfd6ce8dd6c863bc2408152ea98570c7",
+    "worldIdentity": "overworld",
+    "seed": null,
+    "minecraftVersion": "26.1",
+    "mineflayerVersion": "4.39.0",
+    "nodeVersion": "v24.18.0",
+    "server": "localhost:61375",
+    "worldAge": 48639,
+    "timeOfDay": 638,
+    "biome": "plains",
+    "weather": "clear",
+    "difficulty": "normal",
+    "position": {
+      "x": -155.5,
+      "y": 65,
+      "z": 67.7
+    },
+    "health": 20,
+    "food": 20,
+    "saturation": 5,
+    "inventorySnapshot": [],
+    "nearbyEntities": [
+      {
+        "name": "player",
+        "distance": 8.7
+      },
+      {
+        "name": "item",
+        "distance": 17.1
+      },
+      {
+        "name": "item",
+        "distance": 19.6
+      },
+      {
+        "name": "item",
+        "distance": 21.2
+      },
+      {
+        "name": "item",
+        "distance": 18
+      },
+      {
+        "name": "item",
+        "distance": 20.6
+      },
+      {
+        "name": "item",
+        "distance": 18.8
+      },
+      {
+        "name": "item",
+        "distance": 18.4
+      },
+      {
+        "name": "item",
+        "distance": 19.7
+      },
+      {
+        "name": "item",
+        "distance": 2.2
+      },
+      {
+        "name": "item",
+        "distance": 2.2
+      },
+      {
+        "name": "item",
+        "distance": 2.2
+      },
+      {
+        "name": "item",
+        "distance": 2.3
+      },
+      {
+        "name": "item",
+        "distance": 2.2
+      }
+    ],
+    "nearbyResources": [
+      "grass_block",
+      "birch_leaves",
+      "wildflowers",
+      "dirt",
+      "short_grass",
+      "stone",
+      "wall_torch",
+      "cobblestone",
+      "furnace"
+    ],
+    "preflightResults": {
+      "command_attempted": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "timestamp": "2026-09-27T10:56:52.071Z"
+        },
+        {
+          "command": "/gamerule doMobSpawning true",
+          "timestamp": "2026-09-27T10:56:52.073Z"
+        },
+        {
+          "command": "/weather clear",
+          "timestamp": "2026-09-27T10:56:52.073Z"
+        },
+        {
+          "command": "/clear @s",
+          "timestamp": "2026-09-27T10:56:52.074Z"
+        }
+      ],
+      "command_accepted": [
+        {
+          "command": "/gamerule doMobSpawning true",
+          "response": "gamerule doDaylightCycle true<--[HERE]",
+          "timestamp": "2026-09-27T10:56:52.073Z"
+        }
+      ],
+      "command_rejected": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T10:56:52.071Z"
+        },
+        {
+          "command": "/weather clear",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T10:56:52.073Z"
+        },
+        {
+          "command": "/clear @s",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T10:56:52.074Z"
+        }
+      ],
+      "server_response": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T10:56:52.071Z"
+        },
+        {
+          "command": "/gamerule doMobSpawning true",
+          "response": "gamerule doDaylightCycle true<--[HERE]",
+          "timestamp": "2026-09-27T10:56:52.073Z"
+        },
+        {
+          "command": "/weather clear",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T10:56:52.073Z"
+        },
+        {
+          "command": "/clear @s",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T10:56:52.074Z"
+        }
+      ]
+    }
+  }
+}

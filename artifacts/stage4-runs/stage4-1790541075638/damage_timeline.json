@@ -1,0 +1,119 @@
+[
+  {
+    "timestamp": "2026-09-27T20:37:11.462Z",
+    "timeOfDay": null,
+    "previousHealth": 20,
+    "currentHealth": 17,
+    "damageAmount": 3,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:37:12.463Z",
+    "timeOfDay": null,
+    "previousHealth": 18.5,
+    "currentHealth": 15.5,
+    "damageAmount": 3,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:37:13.462Z",
+    "timeOfDay": null,
+    "previousHealth": 16.33333396911621,
+    "currentHealth": 15.333333969116211,
+    "damageAmount": 1,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:37:14.463Z",
+    "timeOfDay": null,
+    "previousHealth": 15.666667938232422,
+    "currentHealth": 14.666667938232422,
+    "damageAmount": 1,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:37:15.464Z",
+    "timeOfDay": null,
+    "previousHealth": 15.000001907348633,
+    "currentHealth": 14.000001907348633,
+    "damageAmount": 1,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:43:18.265Z",
+    "timeOfDay": null,
+    "previousHealth": 16.000001907348633,
+    "currentHealth": 14.000001907348633,
+    "damageAmount": 2,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:43:22.461Z",
+    "timeOfDay": null,
+    "previousHealth": 14.000001907348633,
+    "currentHealth": 12.000001907348633,
+    "damageAmount": 2,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:43:23.461Z",
+    "timeOfDay": null,
+    "previousHealth": 12.000001907348633,
+    "currentHealth": 10.000001907348633,
+    "damageAmount": 2,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:43:24.462Z",
+    "timeOfDay": null,
+    "previousHealth": 10.000001907348633,
+    "currentHealth": 8.000001907348633,
+    "damageAmount": 2,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:43:25.461Z",
+    "timeOfDay": null,
+    "previousHealth": 8.000001907348633,
+    "currentHealth": 6.000001907348633,
+    "damageAmount": 2,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:43:26.461Z",
+    "timeOfDay": null,
+    "previousHealth": 6.000001907348633,
+    "currentHealth": 4.000001907348633,
+    "damageAmount": 2,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:43:29.860Z",
+    "timeOfDay": null,
+    "previousHealth": 4.000001907348633,
+    "currentHealth": 2.000001907348633,
+    "damageAmount": 2,
+    "event": "vital_change",
+    "nearbyThreats": []
+  },
+  {
+    "timestamp": "2026-09-27T20:43:30.860Z",
+    "timeOfDay": null,
+    "previousHealth": 2.000001907348633,
+    "currentHealth": 0.0000019073486328125,
+    "damageAmount": 2,
+    "event": "vital_change",
+    "nearbyThreats": []
+  }
+]

@@ -1,0 +1,128 @@
+[
+  {
+    "milestone": "wooden_pickaxe",
+    "timestamp": "2026-09-27T20:37:43.861Z",
+    "worldAge": 745483,
+    "timeOfDay": 1482,
+    "worldAgeDelta": 780,
+    "expectedModularTimeOfDay": 1482,
+    "drift": 0,
+    "position": {
+      "x": -133.5,
+      "y": 63,
+      "z": 101.5
+    },
+    "vitals": {
+      "health": 16.000001907348633,
+      "food": 17,
+      "saturation": 0
+    },
+    "currentGoal": "stone_pickaxe",
+    "goalStackDepth": 0
+  },
+  {
+    "milestone": "stone_pickaxe",
+    "timestamp": "2026-09-27T20:38:18.161Z",
+    "worldAge": 746163,
+    "timeOfDay": 2161,
+    "worldAgeDelta": 1460,
+    "expectedModularTimeOfDay": 2162,
+    "drift": 1,
+    "position": {
+      "x": -131.6,
+      "y": 64,
+      "z": 103.5
+    },
+    "vitals": {
+      "health": 16.000001907348633,
+      "food": 17,
+      "saturation": 0
+    },
+    "currentGoal": "stone_pickaxe",
+    "goalStackDepth": 0
+  },
+  {
+    "milestone": "building_reserve_acquired",
+    "timestamp": "2026-09-27T20:39:20.464Z",
+    "worldAge": 747403,
+    "timeOfDay": 3402,
+    "worldAgeDelta": 2700,
+    "expectedModularTimeOfDay": 3402,
+    "drift": 0,
+    "position": {
+      "x": -140.5,
+      "y": 66,
+      "z": 106.7
+    },
+    "vitals": {
+      "health": 16.000001907348633,
+      "food": 17,
+      "saturation": 0
+    },
+    "currentGoal": "maintain_building_reserve",
+    "goalStackDepth": 0
+  },
+  {
+    "milestone": "shelter_enclosed",
+    "timestamp": "2026-09-27T20:45:08.573Z",
+    "worldAge": 754363,
+    "timeOfDay": 10362,
+    "worldAgeDelta": 9660,
+    "expectedModularTimeOfDay": 10362,
+    "drift": 0,
+    "position": {
+      "x": -171.3,
+      "y": 67,
+      "z": 118.6
+    },
+    "vitals": {
+      "health": 0.0000019073486328125,
+      "food": 17,
+      "saturation": 0
+    },
+    "currentGoal": "build_shelter",
+    "goalStackDepth": 1
+  },
+  {
+    "milestone": "night_survived",
+    "timestamp": "2026-09-27T20:55:39.806Z",
+    "worldAge": 767003,
+    "timeOfDay": 23002,
+    "worldAgeDelta": 22300,
+    "expectedModularTimeOfDay": 23002,
+    "drift": 0,
+    "position": {
+      "x": -171.3,
+      "y": 67,
+      "z": 118.6
+    },
+    "vitals": {
+      "health": 0.0000019073486328125,
+      "food": 17,
+      "saturation": 0
+    },
+    "currentGoal": "wait_out_night",
+    "goalStackDepth": 1
+  },
+  {
+    "milestone": "dawn_exit_completed",
+    "timestamp": "2026-09-27T20:55:44.726Z",
+    "worldAge": 767083,
+    "timeOfDay": 23081,
+    "worldAgeDelta": 22380,
+    "expectedModularTimeOfDay": 23082,
+    "drift": 1,
+    "position": {
+      "x": -171.5,
+      "y": 67,
+      "z": 120.3
+    },
+    "vitals": {
+      "health": 0.0000019073486328125,
+      "food": 17,
+      "saturation": 0
+    },
+    "currentGoal": "leave_shelter",
+    "goalStackDepth": 1
+  }
+]

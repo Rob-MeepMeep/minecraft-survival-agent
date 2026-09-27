@@ -1,0 +1,306 @@
+{
+  "runId": "stage4-1790519181174",
+  "sourceCommit": "2e39d9851ec70f03d8e089a0c46d0b5bef63206c",
+  "verdict": "STAGE_4_FAILED",
+  "passedGates": 7,
+  "totalGates": 11,
+  "totalAdvancingTicks": 18360,
+  "durationSeconds": 938,
+  "finalVitals": {
+    "health": 11.731328964233398,
+    "food": 16,
+    "saturation": 0
+  },
+  "finalInventory": [
+    {
+      "name": "wooden_pickaxe",
+      "count": 1
+    },
+    {
+      "name": "stone_pickaxe",
+      "count": 1
+    },
+    {
+      "name": "dirt",
+      "count": 12
+    },
+    {
+      "name": "birch_planks",
+      "count": 3
+    }
+  ],
+  "milestones": [
+    {
+      "milestone": "wooden_pickaxe",
+      "timestamp": "2026-09-27T14:37:26.000Z",
+      "worldAge": 313299,
+      "timeOfDay": 1297,
+      "worldAgeDelta": 680,
+      "expectedModularTimeOfDay": 1298,
+      "drift": 1,
+      "position": {
+        "x": -135.5,
+        "y": 62,
+        "z": 102.5
+      },
+      "vitals": {
+        "health": 11.731328964233398,
+        "food": 17,
+        "saturation": 0
+      },
+      "currentGoal": "stone_pickaxe",
+      "goalStackDepth": 0
+    },
+    {
+      "milestone": "stone_pickaxe",
+      "timestamp": "2026-09-27T14:37:47.313Z",
+      "worldAge": 313719,
+      "timeOfDay": 1718,
+      "worldAgeDelta": 1100,
+      "expectedModularTimeOfDay": 1718,
+      "drift": 0,
+      "position": {
+        "x": -135.5,
+        "y": 62,
+        "z": 102.5
+      },
+      "vitals": {
+        "health": 11.731328964233398,
+        "food": 17,
+        "saturation": 0
+      },
+      "currentGoal": "stone_pickaxe",
+      "goalStackDepth": 0
+    },
+    {
+      "milestone": "building_reserve_acquired",
+      "timestamp": "2026-09-27T14:38:56.933Z",
+      "worldAge": 315119,
+      "timeOfDay": 3117,
+      "worldAgeDelta": 2500,
+      "expectedModularTimeOfDay": 3118,
+      "drift": 1,
+      "position": {
+        "x": -141.5,
+        "y": 64,
+        "z": 82.3
+      },
+      "vitals": {
+        "health": 11.731328964233398,
+        "food": 16,
+        "saturation": 0
+      },
+      "currentGoal": "maintain_building_reserve",
+      "goalStackDepth": 0
+    },
+    {
+      "milestone": "shelter_enclosed",
+      "timestamp": "2026-09-27T14:44:55.122Z",
+      "worldAge": 322279,
+      "timeOfDay": 10278,
+      "worldAgeDelta": 9660,
+      "expectedModularTimeOfDay": 10278,
+      "drift": 0,
+      "position": {
+        "x": -141.5,
+        "y": 64,
+        "z": 81.5
+      },
+      "vitals": {
+        "health": 11.731328964233398,
+        "food": 16,
+        "saturation": 0
+      },
+      "currentGoal": "build_shelter",
+      "goalStackDepth": 1
+    }
+  ],
+  "controllerMilestones": {
+    "woodenPickaxeAchieved": true,
+    "stonePickaxeAchieved": true,
+    "foodReserveAcquired": false,
+    "buildingReserveAcquired": true,
+    "shelterEnclosed": true,
+    "nightSurvived": false,
+    "dawnExitCompleted": false
+  },
+  "gates": [
+    {
+      "gate": "Zero Production Slash Commands",
+      "passed": true,
+      "detail": "Issued 0 production slash commands (must be 0)"
+    },
+    {
+      "gate": "Zero Post-Boundary Harness Injections",
+      "passed": true,
+      "detail": "Harness issued 0 commands after natural_run_started boundary (must be 0)"
+    },
+    {
+      "gate": "Zero Player Deaths",
+      "passed": true,
+      "detail": "Player survived with 11.731328964233398/20 HP"
+    },
+    {
+      "gate": "Continuous Game Tick Advancement",
+      "passed": false,
+      "detail": "18360 continuous natural advancing ticks (>= 24000) without skips"
+    },
+    {
+      "gate": "Natural Resource Acquisition",
+      "passed": true,
+      "detail": "Derived from telemetry: 0 /give or /summon, 0 harness injections, all resources gathered from world blocks/drops"
+    },
+    {
+      "gate": "30-Block Building Reserve",
+      "passed": true,
+      "detail": "Building reserve achieved at worldAge=315119, TOD=3117 (< 12000)"
+    },
+    {
+      "gate": "Complete Shelter Before Dusk (timeOfDay < 12000)",
+      "passed": true,
+      "detail": "Shelter enclosed at worldAge=322279, TOD=10278 (< 12000)"
+    },
+    {
+      "gate": "Night Enclosure Integrity Maintained",
+      "passed": false,
+      "detail": "Intact through night; 892 audits passed, zero breaches detected"
+    },
+    {
+      "gate": "Critical Starvation Avoidance",
+      "passed": true,
+      "detail": "Lowest hunger was 16/20 (maintained above critical threshold 6)"
+    },
+    {
+      "gate": "Safe Dawn Exit",
+      "passed": false,
+      "detail": "Dawn exit milestone not verified post-night"
+    },
+    {
+      "gate": "Progression Resumption",
+      "passed": false,
+      "detail": "Progression resumption not verified following dawn exit"
+    }
+  ],
+  "metadata": {
+    "runId": "stage4-1790519181174",
+    "sourceCommit": "2e39d9851ec70f03d8e089a0c46d0b5bef63206c",
+    "worldIdentity": "overworld",
+    "seed": null,
+    "minecraftVersion": "26.1",
+    "mineflayerVersion": "4.39.0",
+    "nodeVersion": "v24.18.0",
+    "server": "localhost:61375",
+    "worldAge": 312619,
+    "timeOfDay": 618,
+    "biome": "plains",
+    "weather": "clear",
+    "difficulty": "normal",
+    "position": {
+      "x": -133.5,
+      "y": 59,
+      "z": 92.5
+    },
+    "health": 11.731328964233398,
+    "food": 17,
+    "saturation": 0,
+    "inventorySnapshot": [],
+    "nearbyEntities": [
+      {
+        "name": "player",
+        "distance": 21
+      },
+      {
+        "name": "bat",
+        "distance": 28.6
+      },
+      {
+        "name": "skeleton",
+        "distance": 22.5
+      },
+      {
+        "name": "item",
+        "distance": 13.9
+      },
+      {
+        "name": "item",
+        "distance": 14
+      }
+    ],
+    "nearbyResources": [
+      "dirt",
+      "grass_block",
+      "stone",
+      "water",
+      "copper_ore",
+      "granite",
+      "sandstone",
+      "sand"
+    ],
+    "preflightResults": {
+      "command_attempted": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "timestamp": "2026-09-27T14:36:51.680Z"
+        },
+        {
+          "command": "/gamerule doMobSpawning true",
+          "timestamp": "2026-09-27T14:36:51.682Z"
+        },
+        {
+          "command": "/weather clear",
+          "timestamp": "2026-09-27T14:36:51.682Z"
+        },
+        {
+          "command": "/clear @s",
+          "timestamp": "2026-09-27T14:36:51.683Z"
+        }
+      ],
+      "command_accepted": [
+        {
+          "command": "/gamerule doMobSpawning true",
+          "response": "gamerule doDaylightCycle true<--[HERE]",
+          "timestamp": "2026-09-27T14:36:51.682Z"
+        }
+      ],
+      "command_rejected": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T14:36:51.680Z"
+        },
+        {
+          "command": "/weather clear",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T14:36:51.682Z"
+        },
+        {
+          "command": "/clear @s",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T14:36:51.683Z"
+        }
+      ],
+      "server_response": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T14:36:51.680Z"
+        },
+        {
+          "command": "/gamerule doMobSpawning true",
+          "response": "gamerule doDaylightCycle true<--[HERE]",
+          "timestamp": "2026-09-27T14:36:51.682Z"
+        },
+        {
+          "command": "/weather clear",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T14:36:51.682Z"
+        },
+        {
+          "command": "/clear @s",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-27T14:36:51.683Z"
+        }
+      ]
+    }
+  }
+}
