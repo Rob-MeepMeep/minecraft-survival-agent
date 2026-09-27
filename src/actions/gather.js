@@ -267,18 +267,18 @@ function computeInventoryDelta(before, after) {
  */
 function findSafeBlock(bot, matcher, maxDistance = 16, failureTracker = null, options = {}) {
   // If gathering dirt or grass_block without an explicit elevationRange, do a two-pass search:
-  // Pass 1: immediate walkable ground elevation [-1, 2]
-  // Pass 2: safe traversable elevation [-2, 3] (avoiding cliffs and deep drops)
+  // Pass 1: immediate walkable ground elevation [-2, 2]
+  // Pass 2: safe traversable elevation [-6, 4] (allows stepping down off trees/ledges to ground)
   if ((matcher === 'dirt' || matcher === 'grass_block') && !options.elevationRange && bot?.entity?.position) {
     const immediate = findSafeBlock(bot, matcher, maxDistance, failureTracker, {
       ...options,
-      elevationRange: [-1, 2],
+      elevationRange: [-2, 2],
     });
     if (immediate) return immediate;
 
     return findSafeBlock(bot, matcher, maxDistance, failureTracker, {
       ...options,
-      elevationRange: [-2, 3],
+      elevationRange: [-6, 4],
     });
   }
 
@@ -312,7 +312,7 @@ function findSafeBlock(bot, matcher, maxDistance = 16, failureTracker = null, op
       const botGroundY = Math.floor(bot.entity.position.y);
       const dy = b.position.y - botGroundY;
       if (b.name === 'dirt' || b.name === 'grass_block') {
-        const [minDy, maxDy] = options.elevationRange || [-2, 3];
+        const [minDy, maxDy] = options.elevationRange || [-6, 4];
         if (dy < minDy || dy > maxDy) return false;
       }
       const horizDist = Math.hypot(b.position.x - bot.entity.position.x, b.position.z - bot.entity.position.z);
@@ -332,8 +332,15 @@ function findSafeBlock(bot, matcher, maxDistance = 16, failureTracker = null, op
     if (b.name === 'dirt' || b.name === 'grass_block') {
       if (typeof bot.blockAt === 'function') {
         const above = bot.blockAt(new Vec3(b.position.x, b.position.y + 1, b.position.z));
-        if (above && !['air', 'cave_air', 'short_grass', 'tall_grass', 'fern', 'dandelion', 'poppy', 'dead_bush'].includes(above.name)) {
-          return false;
+        if (above) {
+          // If above block is solid, target is buried underground
+          if (above.boundingBox === 'block') return false;
+          // Fluid above dirt is unsafe
+          if (['water', 'flowing_water', 'lava', 'flowing_lava'].includes(above.name)) return false;
+          // Non-foliage solid blocks
+          if (!['air', 'cave_air', 'short_grass', 'tall_grass', 'fern', 'large_fern', 'dandelion', 'poppy', 'blue_orchid', 'allium', 'azure_bluet', 'red_tulip', 'orange_tulip', 'white_tulip', 'pink_tulip', 'oxeye_daisy', 'cornflower', 'lily_of_the_valley', 'dead_bush', 'wildflowers', 'pink_petals'].includes(above.name) && above.boundingBox !== 'empty') {
+            return false;
+          }
         }
         if (bot.registry || bot.version || bot.isRealWorld) {
           const below = bot.blockAt(new Vec3(b.position.x, b.position.y - 1, b.position.z));
@@ -354,14 +361,23 @@ function findSafeBlock(bot, matcher, maxDistance = 16, failureTracker = null, op
     return true;
   };
 
+  // Optimize with registry block IDs when available to use Mineflayer's fast palette chunk scan
+  let matchingIds = null;
+  if (typeof matcher === 'string' && bot.registry?.blocksByName) {
+    if (matcher === 'dirt') {
+      matchingIds = [
+        bot.registry.blocksByName.dirt?.id,
+        bot.registry.blocksByName.grass_block?.id,
+      ].filter((id) => id !== undefined);
+    } else if (bot.registry.blocksByName[matcher]?.id !== undefined) {
+      matchingIds = [bot.registry.blocksByName[matcher].id];
+    }
+  }
+
   return bot.findBlock({
-    matching: (b) => {
-      if (!b) return false;
-      if (b.position) {
-        if (!checkBlockSafe(b)) return false;
-      }
-      return predicate(b);
-    },
+    matching: matchingIds && matchingIds.length > 0
+      ? matchingIds
+      : (b) => Boolean(b && predicate(b) && (b.position ? checkBlockSafe(b) : true)),
     useExtraInfo: (b) => {
       if (!checkBlockSafe(b)) return false;
       return true;

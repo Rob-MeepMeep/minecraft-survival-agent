@@ -19,10 +19,10 @@ function createSafeMovements(bot) {
     movements.scafoldingBlocks = [];
     movements.allow1by1towers = false;
     movements.allowParkour = false;
-    movements.maxDropDown = 1;
+    movements.maxDropDown = 3;
     return movements;
   } catch {
-    return { canDig: false, scafoldingBlocks: [], allow1by1towers: false, allowParkour: false, maxDropDown: 1 };
+    return { canDig: false, scafoldingBlocks: [], allow1by1towers: false, allowParkour: false, maxDropDown: 3 };
   }
 }
 

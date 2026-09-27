@@ -176,6 +176,23 @@ test('findSafeBlock — respects column cooldown in failureTracker', () => {
   assert.deepEqual(chosen.position, { x: 8, y: 70, z: 2 }, 'Should bypass column on cooldown and select colBlock2');
 });
 
+test('findSafeBlock — falls back to lower ground elevation when standing on tree or mound', () => {
+  const groundBlock = { name: 'grass_block', position: { x: 3, y: 65, z: 0 } }; // dy = -5 from y=70
+
+  const bot = {
+    entity: { position: { x: 0, y: 70, z: 0 } },
+    blockAt: () => ({ name: 'air' }),
+    findBlock: ({ matching }) => {
+      if (matching(groundBlock)) return groundBlock;
+      return null;
+    },
+  };
+
+  const chosen = findSafeBlock(bot, 'dirt', 16);
+  assert.notEqual(chosen, null);
+  assert.deepEqual(chosen.position, { x: 3, y: 65, z: 0 }, 'Should find ground below tree/mound via Pass 2 fallback');
+});
+
 // ---------------------------------------------------------------------------
 // 5. Expected Drops & Tool Harvest Requirements
 // ---------------------------------------------------------------------------
