@@ -155,7 +155,6 @@ function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 1
           const headBlock = bot.blockAt ? bot.blockAt(new Vec3(targetX, floorY + 2, targetZ)) : null;
 
           if (!floorBlock || floorBlock.boundingBox !== 'block') continue;
-          if (floorBlock.name.endsWith('_leaves') || floorBlock.name === 'leaves') continue;
           if (['water', 'flowing_water', 'lava', 'flowing_lava'].includes(floorBlock.name)) continue;
           if (bodyBlock && ['water', 'flowing_water', 'lava', 'flowing_lava'].includes(bodyBlock.name)) continue;
           if (headBlock && ['water', 'flowing_water', 'lava', 'flowing_lava'].includes(headBlock.name)) continue;
@@ -757,6 +756,7 @@ class SurvivalController {
 
       if (isCleared || fleeAttempts >= 10) {
         if (this._failedFleeTargets) this._failedFleeTargets.clear();
+        this._fleeCooldownUntil = Date.now() + 5000;
         if (this.goalStack.length > 0) {
           const restored = this.goalStack.pop();
           this.currentGoal = restored.goal;
@@ -870,13 +870,17 @@ class SurvivalController {
         if ((type === 'spider' || type === 'cave_spider') && isDaylight) {
           return d <= 3.0;
         }
+        if (isMelee && Math.abs(this.bot.entity.position.y - e.position.y) > 4.5) {
+          return false;
+        }
         return d <= (isRanged ? 16.0 : 10.0);
       });
 
       const currentHealth = this.bot.health ?? 20;
       const tookDamage = this._lastHealth !== undefined && currentHealth < this._lastHealth;
+      const canFlee = !this._fleeCooldownUntil || Date.now() >= this._fleeCooldownUntil;
 
-      if (threats.length > 0 || tookDamage) {
+      if ((threats.length > 0 && canFlee) || tookDamage) {
         const nearest = threats.sort((a, b) => this.bot.entity.position.distanceTo(a.position) - this.bot.entity.position.distanceTo(b.position))[0];
         const nearestDist = nearest ? this.bot.entity.position.distanceTo(nearest.position) : null;
 

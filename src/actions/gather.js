@@ -177,6 +177,10 @@ function hasHostileThreatNearby(bot, minDistance = 8.0, pos = null, rangedDistan
 
     const d = Math.hypot(ent.position.x - refPos.x, ent.position.y - refPos.y, ent.position.z - refPos.z);
 
+    if (isMelee && Math.abs(ent.position.y - refPos.y) > 4.5) {
+      continue;
+    }
+
     // Spiders are neutral in daylight unless within immediate self-defense range (< 3m)
     if ((type === 'spider' || type === 'cave_spider') && isDaylight) {
       if (d <= 3.0) return true;
