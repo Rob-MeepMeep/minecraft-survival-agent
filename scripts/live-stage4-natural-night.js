@@ -341,6 +341,49 @@ async function runStage4Verification() {
   await harnessRunCmd('/weather clear');
   await harnessRunCmd('/clear @s');
 
+  // If player is trapped inside an enclosed space (e.g. from an un-exited shelter from an interrupted run),
+  // break out through the doorway/open wall so player can walk freely on the surface.
+  if (bot.entity?.position) {
+    const p = bot.entity.position;
+    const isEnclosed = ['+x', '-x', '+z', '-z'].every(dir => {
+      const dx = dir === '+x' ? 1 : dir === '-x' ? -1 : 0;
+      const dz = dir === '+z' ? 1 : dir === '-z' ? -1 : 0;
+      const bHead = bot.blockAt ? bot.blockAt(p.offset(dx, 1, dz)) : null;
+      return bHead && bHead.boundingBox === 'block';
+    });
+    if (isEnclosed) {
+      log('Detected player enclosed in structure. Clearing exit path...');
+      const dirs = [
+        { dx: 0, dz: -1 },
+        { dx: 0, dz: 1 },
+        { dx: 1, dz: 0 },
+        { dx: -1, dz: 0 },
+      ];
+      let exitDir = null;
+      for (const d of dirs) {
+        const outsideHead = bot.blockAt(p.offset(d.dx * 2, 1, d.dz * 2));
+        const outsideFeet = bot.blockAt(p.offset(d.dx * 2, 0, d.dz * 2));
+        if ((!outsideHead || outsideHead.boundingBox === 'empty') && (!outsideFeet || outsideFeet.boundingBox === 'empty')) {
+          exitDir = d;
+          break;
+        }
+      }
+      if (!exitDir) exitDir = dirs[0];
+      const wallHead = bot.blockAt(p.offset(exitDir.dx, 1, exitDir.dz));
+      const wallFeet = bot.blockAt(p.offset(exitDir.dx, 0, exitDir.dz));
+      if (wallHead && wallHead.name !== 'air') {
+        try { await bot.dig(wallHead); } catch {}
+      }
+      if (wallFeet && wallFeet.name !== 'air') {
+        try { await bot.dig(wallFeet); } catch {}
+      }
+      bot.lookAt(p.offset(exitDir.dx * 5, 0, exitDir.dz * 5));
+      bot.setControlState('forward', true);
+      await wait(1200);
+      bot.setControlState('forward', false);
+    }
+  }
+
   log('Discarding any existing inventory items naturally...');
   for (let attempt = 0; attempt < 3; attempt++) {
     const items = bot.inventory.items();
