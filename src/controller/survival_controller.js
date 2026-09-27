@@ -75,59 +75,94 @@ function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 1
   if (!bot.entity?.position) return null;
   const botPos = bot.entity.position;
 
+  const validThreats = (threats || []).filter(t => t && t.position);
+  if (validThreats.length === 0) return null;
+
+  // Identify nearest threat and distance
+  let nearestThreat = null;
+  let nearestDist = Infinity;
+  for (const t of validThreats) {
+    const d = botPos.distanceTo(t.position);
+    if (d < nearestDist) {
+      nearestDist = d;
+      nearestThreat = t;
+    }
+  }
+
+  // Calculate weighted vector away from threats (weighted inversely by distance so closer threats dominate)
   let awayX = 0;
   let awayZ = 0;
-  for (const t of threats) {
-    if (!t.position) continue;
+  for (const t of validThreats) {
     const dx = botPos.x - t.position.x;
     const dz = botPos.z - t.position.z;
     const d = Math.hypot(dx, dz) || 1;
-    awayX += dx / d;
-    awayZ += dz / d;
+    const weight = 1 / Math.max(d, 1);
+    awayX += (dx / d) * weight;
+    awayZ += (dz / d) * weight;
   }
   const awayLen = Math.hypot(awayX, awayZ) || 1;
   const baseAngle = Math.atan2(awayZ / awayLen, awayX / awayLen);
 
-  const angleOffsets = [0, 0.44, -0.44, 0.87, -0.87, 1.3, -1.3];
-  const distances = [minFleeDist, 14, (minFleeDist + maxFleeDist) / 2, 16, maxFleeDist];
+  // Progressive angle offsets (including lateral escape vectors)
+  const angleOffsets = [0, 0.44, -0.44, 0.87, -0.87, 1.3, -1.3, 1.74, -1.74, 2.18, -2.18, Math.PI];
+  // Vertical offsets covering natural inclines (+1, +2, +3) and descents (-1 to -4)
+  const verticalOffsets = [0, 1, -1, 2, -2, 3, -3, -4];
 
-  for (const dist of distances) {
-    for (const ang of angleOffsets) {
-      const angle = baseAngle + ang;
-      const targetX = Math.floor(botPos.x + Math.cos(angle) * dist) + 0.5;
-      const targetZ = Math.floor(botPos.z + Math.sin(angle) * dist) + 0.5;
+  // Try standard flee distances first, then shorter emergency burst distances if terrain is constrained
+  const distanceTiers = [
+    [minFleeDist, 14, (minFleeDist + maxFleeDist) / 2, 16, maxFleeDist],
+    [10, 8, 6],
+  ];
 
-      for (let dy = 0; dy >= -2; dy--) {
-        const floorY = Math.floor(botPos.y) + dy;
-        const candidatePos = new Vec3(targetX, floorY + 1, targetZ);
-        const floorBlock = bot.blockAt ? bot.blockAt(new Vec3(targetX, floorY, targetZ)) : null;
-        const bodyBlock = bot.blockAt ? bot.blockAt(candidatePos) : null;
-        const headBlock = bot.blockAt ? bot.blockAt(new Vec3(targetX, floorY + 2, targetZ)) : null;
+  for (const distances of distanceTiers) {
+    for (const dist of distances) {
+      for (const ang of angleOffsets) {
+        const angle = baseAngle + ang;
+        const targetX = Math.floor(botPos.x + Math.cos(angle) * dist) + 0.5;
+        const targetZ = Math.floor(botPos.z + Math.sin(angle) * dist) + 0.5;
 
-        if (!floorBlock || floorBlock.boundingBox !== 'block') continue;
-        if (floorBlock.name.endsWith('_leaves') || floorBlock.name === 'leaves') continue;
-        if (['water', 'flowing_water', 'lava', 'flowing_lava'].includes(floorBlock.name)) continue;
-        if (bodyBlock && ['water', 'flowing_water', 'lava', 'flowing_lava'].includes(bodyBlock.name)) continue;
-        if (headBlock && ['water', 'flowing_water', 'lava', 'flowing_lava'].includes(headBlock.name)) continue;
-        if (bodyBlock && bodyBlock.boundingBox === 'block') continue;
-        if (headBlock && headBlock.boundingBox === 'block') continue;
+        for (const dy of verticalOffsets) {
+          const floorY = Math.floor(botPos.y) + dy;
+          const candidatePos = new Vec3(targetX, floorY + 1, targetZ);
+          const floorBlock = bot.blockAt ? bot.blockAt(new Vec3(targetX, floorY, targetZ)) : null;
+          const bodyBlock = bot.blockAt ? bot.blockAt(candidatePos) : null;
+          const headBlock = bot.blockAt ? bot.blockAt(new Vec3(targetX, floorY + 2, targetZ)) : null;
 
-        const subFloor = bot.blockAt ? bot.blockAt(new Vec3(targetX, floorY - 1, targetZ)) : null;
-        if (!subFloor || subFloor.name === 'lava' || subFloor.name === 'flowing_lava') continue;
+          if (!floorBlock || floorBlock.boundingBox !== 'block') continue;
+          if (floorBlock.name.endsWith('_leaves') || floorBlock.name === 'leaves') continue;
+          if (['water', 'flowing_water', 'lava', 'flowing_lava'].includes(floorBlock.name)) continue;
+          if (bodyBlock && ['water', 'flowing_water', 'lava', 'flowing_lava'].includes(bodyBlock.name)) continue;
+          if (headBlock && ['water', 'flowing_water', 'lava', 'flowing_lava'].includes(headBlock.name)) continue;
+          if (bodyBlock && bodyBlock.boundingBox === 'block') continue;
+          if (headBlock && headBlock.boundingBox === 'block') continue;
 
-        let bringsCloser = false;
-        for (const t of threats) {
-          if (!t.position) continue;
-          const currentDist = botPos.distanceTo(t.position);
-          const candidateDist = candidatePos.distanceTo(t.position);
-          if (candidateDist <= currentDist - 0.5) {
-            bringsCloser = true;
-            break;
+          const subFloor = bot.blockAt ? bot.blockAt(new Vec3(targetX, floorY - 1, targetZ)) : null;
+          if (!subFloor || subFloor.name === 'lava' || subFloor.name === 'flowing_lava') continue;
+
+          // Must gain distance from the primary/nearest threat
+          if (nearestThreat) {
+            const candNearestDist = candidatePos.distanceTo(nearestThreat.position);
+            if (candNearestDist <= nearestDist + 0.5) continue;
           }
-        }
-        if (bringsCloser) continue;
 
-        return candidatePos;
+          // Must not run into immediate danger reach of any threat
+          let bringsCloser = false;
+          for (const t of validThreats) {
+            const currentDist = botPos.distanceTo(t.position);
+            const candidateDist = candidatePos.distanceTo(t.position);
+            const isRanged = RANGED_HOSTILES.has(t.name || t.type);
+            const dangerReach = isRanged ? 8.0 : 4.5;
+
+            // If candidate is within danger reach and gets closer, reject
+            if (candidateDist < dangerReach && candidateDist <= currentDist) {
+              bringsCloser = true;
+              break;
+            }
+          }
+          if (bringsCloser) continue;
+
+          return candidatePos;
+        }
       }
     }
   }
@@ -692,6 +727,19 @@ class SurvivalController {
         this._scheduleTick(100, runId);
         return;
       } else {
+        // Defensive knockback if a hostile mob is within striking reach
+        const nearestThreat = [...threats].sort((a, b) => this.bot.entity.position.distanceTo(a.position) - this.bot.entity.position.distanceTo(b.position))[0];
+        const dist = nearestThreat ? this.bot.entity.position.distanceTo(nearestThreat.position) : Infinity;
+        if (nearestThreat && dist <= 3.5 && nearestThreat.name !== 'creeper' && typeof this.bot.attack === 'function') {
+          try {
+            if (typeof this.bot.lookAt === 'function') {
+              const eyeY = nearestThreat.height ? nearestThreat.height * 0.8 : 1.4;
+              await this.bot.lookAt(nearestThreat.position.offset(0, eyeY, 0));
+            }
+            this.bot.attack(nearestThreat);
+          } catch {}
+        }
+
         this.telemetry?.emit({
           event: 'controller_warning',
           controllerRunId: runId,

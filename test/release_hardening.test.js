@@ -128,6 +128,47 @@ test('P1-1: findSafeFleeDestination returns null when all candidates are hazardo
   assert.equal(safeTarget, null);
 });
 
+test('findSafeFleeDestination succeeds in multi-threat scenario by fleeing nearest threat', () => {
+  const botPos = new Vec3(50, 64, 50);
+  const mockBot = createMockBot({
+    playerPos: botPos,
+    blockAt: (pos) => {
+      if (pos.y < 64) {
+        return { name: 'stone', boundingBox: 'block', position: new Vec3(pos.x, pos.y, pos.z) };
+      }
+      return { name: 'air', boundingBox: 'empty', position: new Vec3(pos.x, pos.y, pos.z) };
+    },
+  });
+
+  const threats = [
+    { position: new Vec3(50, 64, 55), name: 'creeper' }, // 5m south
+    { position: new Vec3(40, 64, 50), name: 'zombie' },  // 10m west
+  ];
+  const safeTarget = findSafeFleeDestination(mockBot, threats, 12, 18);
+  assert.ok(safeTarget !== null, 'Should find safe flee destination despite multiple threats');
+  assert.ok(safeTarget.distanceTo(threats[0].position) > 5.5, 'Must gain distance from nearest threat (creeper)');
+});
+
+test('findSafeFleeDestination navigates up sloped terrain (dy = +2)', () => {
+  const botPos = new Vec3(50, 64, 50);
+  const mockBot = createMockBot({
+    playerPos: botPos,
+    blockAt: (pos) => {
+      // Slopes up to Y=66 in the north direction (z < 45)
+      const floorY = pos.z < 45 ? 65 : 63;
+      if (pos.y <= floorY) {
+        return { name: 'stone', boundingBox: 'block', position: new Vec3(pos.x, pos.y, pos.z) };
+      }
+      return { name: 'air', boundingBox: 'empty', position: new Vec3(pos.x, pos.y, pos.z) };
+    },
+  });
+
+  const threats = [{ position: new Vec3(50, 64, 55), name: 'zombie' }]; // 5m south
+  const safeTarget = findSafeFleeDestination(mockBot, threats, 12, 18);
+  assert.ok(safeTarget !== null, 'Should find safe flee destination on elevated terrain');
+  assert.equal(safeTarget.y, 66, 'Should find candidate standing on Y=65 block (candidatePos.y = 66)');
+});
+
 test('P1-2: Shelter breach during night transitions controller to failed_unsafe and blocks night_survived', () => {
   const mockBot = createMockBot({
     time: { timeOfDay: 18000, age: 10000 },
