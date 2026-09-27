@@ -271,15 +271,36 @@ function createShelterBlueprint(center, exitDirection, material = 'dirt', metada
   }
 
   // Phase 3: Roof perimeter (y = 2, all 8 perimeter blocks)
+  // Place the 7 blocks with solid supporting walls underneath first,
+  // and place the block directly above the doorway exit last so it is supported by its adjacent roof blocks.
+  const wallSupportedRoof = [];
+  let doorwayRoof = null;
+
   for (const { dx, dz } of perimeterDeltas) {
-    requiredCoordinates.push({
-      x: cx + dx, y: cy + 2, z: cz + dz,
+    const x = cx + dx;
+    const z = cz + dz;
+    const coord = {
+      x, y: cy + 2, z,
       phase: 'roof_perimeter',
-      blockIndex: requiredCoordinates.length + 1,
       material,
       expectedMaterial: material,
       verified: false,
-    });
+    };
+    if (x === exitX && z === exitZ) {
+      doorwayRoof = coord;
+    } else {
+      wallSupportedRoof.push(coord);
+    }
+  }
+
+  for (const c of wallSupportedRoof) {
+    c.blockIndex = requiredCoordinates.length + 1;
+    requiredCoordinates.push(c);
+  }
+
+  if (doorwayRoof) {
+    doorwayRoof.blockIndex = requiredCoordinates.length + 1;
+    requiredCoordinates.push(doorwayRoof);
   }
 
   // Phase 4: Roof center (y = 2, directly overhead)

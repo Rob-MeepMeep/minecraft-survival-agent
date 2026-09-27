@@ -1301,9 +1301,14 @@ class SurvivalController {
           return;
         }
         if (currentNutrition < (this.options.foodReserveNutrition || 10)) {
-          this.currentGoal = 'acquire_food';
-          this._scheduleTick(0, runId);
-          return;
+          const hasFoodSource =
+            findHarvestableCrop(this.bot, this.failureTracker, 24) ||
+            findFoodAnimal(this.bot, this.failureTracker, 16);
+          if (hasFoodSource) {
+            this.currentGoal = 'acquire_food';
+            this._scheduleTick(0, runId);
+            return;
+          }
         }
         if (timeOfDay !== null && timeOfDay < SHELTER_PREP_TIME) {
           this.currentGoal = 'observe_daylight';
@@ -1409,19 +1414,40 @@ class SurvivalController {
 
     // 7C. Blocked State
     if (plan.status === 'blocked') {
-      if (this.currentGoal === 'acquire_food' && this.goalStack.length > 0 && plan.reason === 'no_food_source_available') {
-        const restored = this.goalStack.pop();
-        this.telemetry?.emit({
-          event: 'controller_goal_resumed',
-          controllerRunId: runId,
-          generation: this.generation,
-          goal: restored.goal,
-          reason: 'food_acquisition_unachievable_yielding_to_progression',
-          stackDepth: this.goalStack.length,
-        });
-        this.currentGoal = restored.goal;
-        this._scheduleTick(0, runId);
-        return;
+      if (this.currentGoal === 'acquire_food' && plan.reason === 'no_food_source_available') {
+        if (this.goalStack.length > 0) {
+          const restored = this.goalStack.pop();
+          this.telemetry?.emit({
+            event: 'controller_goal_resumed',
+            controllerRunId: runId,
+            generation: this.generation,
+            goal: restored.goal,
+            reason: 'food_acquisition_unachievable_yielding_to_progression',
+            stackDepth: this.goalStack.length,
+          });
+          this.currentGoal = restored.goal;
+          this._scheduleTick(0, runId);
+          return;
+        } else {
+          const expendable = getExpendableBuildingBlocks(items);
+          if (expendable < (this.options.targetReserve || 30)) {
+            this.currentGoal = 'maintain_building_reserve';
+          } else if (timeOfDay !== null && timeOfDay >= SHELTER_PREP_TIME) {
+            this.currentGoal = 'build_shelter';
+          } else {
+            this.currentGoal = 'observe_daylight';
+          }
+          this.telemetry?.emit({
+            event: 'controller_goal_switched',
+            controllerRunId: runId,
+            generation: this.generation,
+            from: 'acquire_food',
+            to: this.currentGoal,
+            reason: 'food_acquisition_unachievable_fallback',
+          });
+          this._scheduleTick(0, runId);
+          return;
+        }
       }
 
       if ((this.currentGoal === 'stone_pickaxe' || this.currentGoal === 'wooden_pickaxe') &&
