@@ -600,11 +600,48 @@ class SurvivalController {
   async _tick(runId) {
     if (!this.active || this.currentRunId !== runId) return;
 
-    // 1. Single-Flight Concurrency Guarantee: Yield if action is in progress
+    // 1. Single-Flight Concurrency Guarantee: Yield if action is in progress, but preempt on urgent danger
     if (this.actionManager && this.actionManager.isBusy) {
+      const isShelterGoal = this.currentGoal === 'build_shelter' ||
+        this.currentGoal === 'wait_out_night' ||
+        this.currentGoal === 'leave_shelter';
+
+      // Check for urgent threat or damage during in-flight actions
+      if (!isShelterGoal && !this.shelterSafetyClaim && this.bot.entities && this.bot.entity?.position) {
+        const threats = Object.values(this.bot.entities).filter(e => {
+          if (!e || !e.position || e === this.bot.entity) return false;
+          const type = e.name || e.type;
+          const isRanged = RANGED_HOSTILES.has(type);
+          const isMelee = MELEE_HOSTILES.has(type);
+          if (!isRanged && !isMelee) return false;
+          const d = this.bot.entity.position.distanceTo(e.position);
+          return d <= (isRanged ? 14.0 : 7.0);
+        });
+
+        const currentHealth = this.bot.health ?? 20;
+        const tookDamage = this._lastHealth !== undefined && currentHealth < this._lastHealth;
+
+        if (threats.length > 0 || tookDamage) {
+          const actionName = this.actionManager.currentAction?.actionName;
+          const isEvading = this.currentGoal === 'flee_threat' && actionName === 'navigate';
+          if (!isEvading) {
+            this.telemetry?.emit({
+              event: 'controller_preemption',
+              controllerRunId: runId,
+              generation: this.generation,
+              action: actionName,
+              reason: threats.length > 0 ? 'hostile_threat_nearby' : 'damage_received',
+            });
+            this.actionManager.cancel('hostile_threat_nearby');
+          }
+        }
+      }
+      this._lastHealth = this.bot.health;
+
       this._scheduleTick(100, runId);
       return;
     }
+    this._lastHealth = this.bot.health;
 
     const snap = snapshot(this.bot);
 

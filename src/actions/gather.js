@@ -595,14 +595,43 @@ function createGatherer(bot, actionManager) {
       bot.pathfinder.setMovements(getMovements());
       const reachGoal = new goals.GoalNear(blockPos.x, blockPos.y, blockPos.z, 2.5);
 
+      let approachThreatAborted = false;
+      let approachInterval = null;
+      if (options.safeOnly !== false) {
+        approachInterval = setInterval(() => {
+          if (hasHostileThreatNearby(bot, 7.0)) {
+            approachThreatAborted = true;
+            try { bot.pathfinder.stop(); } catch {}
+          }
+        }, 100);
+      }
+
       try {
         await bot.pathfinder.goto(reachGoal);
       } catch (err) {
+        if (approachInterval) clearInterval(approachInterval);
+        if (approachThreatAborted) {
+          return {
+            outcome: 'failed',
+            reason: 'hostile_threat_nearby',
+            details: { block: blockName, pos: blockPos },
+          };
+        }
         if (signal.aborted) throw err;
         return {
           outcome: 'failed',
           reason: 'could_not_reach_block',
           details: { error: err.message },
+        };
+      } finally {
+        if (approachInterval) clearInterval(approachInterval);
+      }
+
+      if (approachThreatAborted) {
+        return {
+          outcome: 'failed',
+          reason: 'hostile_threat_nearby',
+          details: { block: blockName, pos: blockPos },
         };
       }
 

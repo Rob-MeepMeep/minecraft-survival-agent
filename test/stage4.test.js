@@ -2,6 +2,8 @@
 
 const test = require('node:test');
 const assert = require('node:assert');
+const fs = require('node:fs');
+const path = require('node:path');
 const { Vec3 } = require('vec3');
 
 const {
@@ -240,51 +242,57 @@ test('Stage 4 — Bounded Dawn Wait and Exit Blocked Failure', async () => {
 });
 
 test('Stage 4 — Real-Time BlockUpdate Shelter Breach Detection', () => {
-  const events = [];
-  const telemetry = { emit: (e) => events.push(e) };
-  const center = { x: 20, y: 80, z: 20 };
-  const blueprint = createShelterBlueprint(center, { x: 0, y: 0, z: 1 }, 'dirt');
-  saveBlueprint(blueprint);
+  const tmpBp = path.join(process.cwd(), `.test_bp_breach_${Date.now()}.json`);
+  process.env.SHELTER_BLUEPRINT_PATH = tmpBp;
 
-  let blockUpdateCb = null;
-  const bot = {
-    on: (evt, cb) => {
-      if (evt === 'blockUpdate') blockUpdateCb = cb;
-    },
-    entity: { position: new Vec3(20.5, 80, 20.5) },
-    inventory: { items: () => [] },
-    food: 20,
-    health: 20,
-    time: { timeOfDay: 15000, age: 20000 },
-  };
+  try {
+    const events = [];
+    const telemetry = { emit: (e) => events.push(e) };
+    const center = { x: 20, y: 80, z: 20 };
+    const blueprint = createShelterBlueprint(center, { x: 0, y: 0, z: 1 }, 'dirt');
+    saveBlueprint(blueprint);
 
-  const controller = new SurvivalController({
-    bot,
-    actionManager: { isBusy: false },
-    telemetry,
-  });
+    let blockUpdateCb = null;
+    const bot = {
+      on: (evt, cb) => {
+        if (evt === 'blockUpdate') blockUpdateCb = cb;
+      },
+      entity: { position: new Vec3(20.5, 80, 20.5) },
+      inventory: { items: () => [] },
+      food: 20,
+      health: 20,
+      time: { timeOfDay: 15000, age: 20000 },
+    };
 
-  controller.active = true;
-  controller.currentGoal = 'wait_out_night';
-  controller.shelterSafetyClaim = true;
+    const controller = new SurvivalController({
+      bot,
+      actionManager: { isBusy: false },
+      telemetry,
+    });
 
-  assert.ok(blockUpdateCb, 'blockUpdate listener should be registered');
+    controller.active = true;
+    controller.currentGoal = 'wait_out_night';
+    controller.shelterSafetyClaim = true;
 
-  // Simulate an external explosion or enderman breaking wall block at (20, 81, 19)
-  const brokenPos = new Vec3(20, 81, 19);
-  blockUpdateCb(
-    { name: 'dirt', boundingBox: 'block', position: brokenPos },
-    { name: 'air', boundingBox: 'empty', position: brokenPos }
-  );
+    assert.ok(blockUpdateCb, 'blockUpdate listener should be registered');
 
-  const breach = events.find(e => e.event === 'shelter_breached');
-  assert.ok(breach, 'Expected shelter_breached telemetry event');
-  assert.strictEqual(controller.shelterSafetyClaim, false);
-  assert.strictEqual(breach.position.x, 20);
-  assert.strictEqual(breach.position.y, 81);
-  assert.strictEqual(breach.position.z, 19);
+    // Simulate an external explosion or enderman breaking wall block at (20, 81, 19)
+    const brokenPos = new Vec3(20, 81, 19);
+    blockUpdateCb(
+      { name: 'dirt', boundingBox: 'block', position: brokenPos },
+      { name: 'air', boundingBox: 'empty', position: brokenPos }
+    );
 
-  clearBlueprint();
+    const breach = events.find(e => e.event === 'shelter_breached');
+    assert.ok(breach, 'Expected shelter_breached telemetry event');
+    assert.strictEqual(controller.shelterSafetyClaim, false);
+    assert.strictEqual(breach.position.x, 20);
+    assert.strictEqual(breach.position.y, 81);
+    assert.strictEqual(breach.position.z, 19);
+  } finally {
+    delete process.env.SHELTER_BLUEPRINT_PATH;
+    try { if (fs.existsSync(tmpBp)) fs.unlinkSync(tmpBp); } catch {}
+  }
 });
 
 // ---------------------------------------------------------------------------
