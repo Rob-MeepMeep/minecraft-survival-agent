@@ -91,32 +91,37 @@ function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 1
   const botPos = bot.entity.position;
 
   const validThreats = (threats || []).filter(t => t && t.position);
-  if (validThreats.length === 0) return null;
 
-  // Identify nearest threat and distance
+  let baseAngle = 0;
   let nearestThreat = null;
   let nearestDist = Infinity;
-  for (const t of validThreats) {
-    const d = botPos.distanceTo(t.position);
-    if (d < nearestDist) {
-      nearestDist = d;
-      nearestThreat = t;
-    }
-  }
 
-  // Calculate weighted vector away from threats (weighted inversely by distance so closer threats dominate)
-  let awayX = 0;
-  let awayZ = 0;
-  for (const t of validThreats) {
-    const dx = botPos.x - t.position.x;
-    const dz = botPos.z - t.position.z;
-    const d = Math.hypot(dx, dz) || 1;
-    const weight = 1 / Math.max(d, 1);
-    awayX += (dx / d) * weight;
-    awayZ += (dz / d) * weight;
+  if (validThreats.length > 0) {
+    for (const t of validThreats) {
+      const d = botPos.distanceTo(t.position);
+      if (d < nearestDist) {
+        nearestDist = d;
+        nearestThreat = t;
+      }
+    }
+
+    // Calculate weighted vector away from threats (weighted inversely by distance so closer threats dominate)
+    let awayX = 0;
+    let awayZ = 0;
+    for (const t of validThreats) {
+      const dx = botPos.x - t.position.x;
+      const dz = botPos.z - t.position.z;
+      const d = Math.hypot(dx, dz) || 1;
+      const weight = 1 / Math.max(d, 1);
+      awayX += (dx / d) * weight;
+      awayZ += (dz / d) * weight;
+    }
+    const awayLen = Math.hypot(awayX, awayZ) || 1;
+    baseAngle = Math.atan2(awayZ / awayLen, awayX / awayLen);
+  } else {
+    // Environmental damage / hazard evasion: move away from current position in any clear direction
+    baseAngle = typeof bot.entity.yaw === 'number' ? -bot.entity.yaw : 0;
   }
-  const awayLen = Math.hypot(awayX, awayZ) || 1;
-  const baseAngle = Math.atan2(awayZ / awayLen, awayX / awayLen);
 
   // Progressive angle offsets (including lateral escape vectors)
   const angleOffsets = [0, 0.44, -0.44, 0.87, -0.87, 1.3, -1.3, 1.74, -1.74, 2.18, -2.18, Math.PI];
@@ -124,10 +129,14 @@ function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 1
   const verticalOffsets = [0, 1, -1, 2, -2, 3, -3, -4];
 
   // Try standard flee distances first, then shorter emergency burst distances if terrain is constrained
-  const distanceTiers = [
-    [minFleeDist, 14, (minFleeDist + maxFleeDist) / 2, 16, maxFleeDist],
-    [10, 8, 6],
-  ];
+  const distanceTiers = validThreats.length > 0
+    ? [
+        [minFleeDist, 14, (minFleeDist + maxFleeDist) / 2, 16, maxFleeDist],
+        [10, 8, 6],
+      ]
+    : [
+        [6, 8, 4, 10],
+      ];
 
   for (const distances of distanceTiers) {
     for (const dist of distances) {
@@ -653,6 +662,22 @@ class SurvivalController {
               reason: threats.length > 0 ? 'hostile_threat_nearby' : 'damage_received',
             });
             this.actionManager.cancel('hostile_threat_nearby');
+
+            const frame = {
+              goal: this.currentGoal,
+              args: [],
+              trigger: tookDamage ? 'damage_evasion' : 'threat_evasion',
+              completionPredicate: threats.length > 0
+                ? { type: 'threat_cleared', meleeDistance: 10.0, rangedDistance: 16.0 }
+                : { type: 'damage_cleared' },
+              controllerRunId: runId,
+            };
+            this.goalStack.push(frame);
+
+            this.currentGoal = 'flee_threat';
+            this._fleeAttemptCount = 0;
+            this._scheduleTick(0, runId);
+            return;
           }
         }
       }
@@ -716,8 +741,11 @@ class SurvivalController {
 
     // 0A. Daytime Hostile Threat Evasion Active Goal Handler
     if (this.currentGoal === 'flee_threat') {
-      const isCleared = !hasHostileThreatNearby(this.bot, 10.0, null, 16.0);
+      const currentHealth = this.bot.health ?? 20;
+      const isDamaged = this._lastHealth !== undefined && currentHealth < this._lastHealth;
+      const hasHostiles = hasHostileThreatNearby(this.bot, 10.0, null, 16.0);
       const fleeAttempts = this._fleeAttemptCount || 0;
+      const isCleared = !hasHostiles && !isDamaged && fleeAttempts >= 1;
 
       if (isCleared || fleeAttempts >= 10) {
         if (this.goalStack.length > 0) {
@@ -810,9 +838,9 @@ class SurvivalController {
       }
     }
 
-    // 0B. Daytime Hostile Threat Detection: suspend current goal onto stack and flee
-    if (!isShelterGoal && this.currentGoal !== 'flee_threat' && !this.shelterSafetyClaim && this.bot.entities && this.bot.entity?.position) {
-      const threats = Object.values(this.bot.entities).filter(e => {
+    // 0B. Threat or Damage Detection: suspend current goal onto stack and flee
+    if (!isShelterGoal && this.currentGoal !== 'flee_threat' && !this.shelterSafetyClaim && this.bot.entity?.position) {
+      const threats = Object.values(this.bot.entities || {}).filter(e => {
         if (!e || !e.position || e === this.bot.entity) return false;
         const type = e.name || e.type;
         const isRanged = RANGED_HOSTILES.has(type);
@@ -822,15 +850,20 @@ class SurvivalController {
         return d <= (isRanged ? 16.0 : 10.0);
       });
 
-      if (threats.length > 0) {
+      const currentHealth = this.bot.health ?? 20;
+      const tookDamage = this._lastHealth !== undefined && currentHealth < this._lastHealth;
+
+      if (threats.length > 0 || tookDamage) {
         const nearest = threats.sort((a, b) => this.bot.entity.position.distanceTo(a.position) - this.bot.entity.position.distanceTo(b.position))[0];
-        const nearestDist = this.bot.entity.position.distanceTo(nearest.position);
+        const nearestDist = nearest ? this.bot.entity.position.distanceTo(nearest.position) : null;
 
         const frame = {
           goal: this.currentGoal,
           args: [],
-          trigger: 'threat_evasion',
-          completionPredicate: { type: 'threat_cleared', meleeDistance: 10.0, rangedDistance: 16.0 },
+          trigger: tookDamage ? 'damage_evasion' : 'threat_evasion',
+          completionPredicate: threats.length > 0
+            ? { type: 'threat_cleared', meleeDistance: 10.0, rangedDistance: 16.0 }
+            : { type: 'damage_cleared' },
           controllerRunId: runId,
         };
         this.goalStack.push(frame);
@@ -840,9 +873,9 @@ class SurvivalController {
           controllerRunId: runId,
           generation: this.generation,
           goal: frame.goal,
-          trigger: 'threat_evasion',
+          trigger: tookDamage ? 'damage_evasion' : 'threat_evasion',
           newGoal: 'flee_threat',
-          threat: nearest.name,
+          threat: nearest?.name || 'environmental_hazard',
           distance: nearestDist,
           stackDepth: this.goalStack.length,
         });
