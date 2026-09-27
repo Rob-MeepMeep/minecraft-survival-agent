@@ -28,6 +28,7 @@ const fs = require('fs');
 const path = require('path');
 const { execSync } = require('child_process');
 const { Vec3 } = require('vec3');
+const { Movements, goals } = require('mineflayer-pathfinder');
 
 const { loadConfig } = require('../src/config');
 const { createAgent } = require('../src/connection');
@@ -341,8 +342,50 @@ async function runStage4Verification() {
   await harnessRunCmd('/clear @s');
 
   log('Discarding any existing inventory items naturally...');
-  for (const item of bot.inventory.items()) {
-    try { await bot.tossStack(item); } catch {}
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const items = bot.inventory.items();
+    if (items.length === 0) break;
+    for (const item of items) {
+      try { await bot.tossStack(item); } catch {}
+    }
+    // Step away 5 blocks so player does not vacuum back discarded items when pickup delay expires
+    try {
+      const movements = new Movements(bot);
+      movements.canDig = false;
+      bot.pathfinder.setMovements(movements);
+      let targetPos = null;
+      for (const [dx, dz] of [[5, 0], [-5, 0], [0, 5], [0, -5], [4, 4], [-4, -4]]) {
+        const dest = bot.entity.position.offset(dx, 0, dz);
+        const blockBelow = bot.blockAt(dest.offset(0, -1, 0));
+        const blockAt = bot.blockAt(dest);
+        const blockAbove = bot.blockAt(dest.offset(0, 1, 0));
+        if (blockBelow && blockBelow.boundingBox === 'block' && blockAt && blockAt.boundingBox === 'empty' && blockAbove && blockAbove.boundingBox === 'empty') {
+          targetPos = dest;
+          break;
+        }
+      }
+      if (targetPos) {
+        let timer;
+        const timeoutPromise = new Promise((_, reject) => {
+          timer = setTimeout(() => {
+            try { bot.pathfinder.stop(); } catch {}
+            reject(new Error('Navigation timed out'));
+          }, 4000);
+        });
+        await Promise.race([
+          bot.pathfinder.goto(new goals.GoalNear(targetPos.x, targetPos.y, targetPos.z, 1.0)),
+          timeoutPromise,
+        ]).finally(() => clearTimeout(timer));
+      } else {
+        bot.setControlState('back', true);
+        await wait(1200);
+        bot.setControlState('back', false);
+      }
+    } catch (e) {
+      log(`Preflight step-away notice: ${e.message}`);
+    }
+    // Wait for pickup delay to completely expire (> 40 ticks = 2000ms)
+    await wait(2200);
   }
   await wait(500);
 

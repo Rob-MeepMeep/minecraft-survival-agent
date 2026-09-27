@@ -86,7 +86,7 @@ function isExitCoordinate(pos, bp) {
  * @param {number} [maxFleeDist=18]
  * @returns {import('vec3').Vec3 | null}
  */
-function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 18) {
+function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 18, blacklist = null) {
   if (!bot.entity?.position) return null;
   const botPos = bot.entity.position;
 
@@ -125,8 +125,8 @@ function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 1
 
   // Progressive angle offsets (including lateral escape vectors)
   const angleOffsets = [0, 0.44, -0.44, 0.87, -0.87, 1.3, -1.3, 1.74, -1.74, 2.18, -2.18, Math.PI];
-  // Vertical offsets covering natural inclines (+1, +2, +3) and descents (-1 to -4)
-  const verticalOffsets = [0, 1, -1, 2, -2, 3, -3, -4];
+  // Vertical offsets covering natural jumpable inclines (0, +1) and descents (-1 to -3)
+  const verticalOffsets = [0, 1, -1, -2, -3];
 
   // Try standard flee distances first, then shorter emergency burst distances if terrain is constrained
   const distanceTiers = validThreats.length > 0
@@ -148,6 +148,8 @@ function findSafeFleeDestination(bot, threats, minFleeDist = 12, maxFleeDist = 1
         for (const dy of verticalOffsets) {
           const floorY = Math.floor(botPos.y) + dy;
           const candidatePos = new Vec3(targetX, floorY + 1, targetZ);
+          const candKey = `${Math.floor(targetX)},${floorY + 1},${Math.floor(targetZ)}`;
+          if (blacklist && blacklist.has(candKey)) continue;
           const floorBlock = bot.blockAt ? bot.blockAt(new Vec3(targetX, floorY, targetZ)) : null;
           const bodyBlock = bot.blockAt ? bot.blockAt(candidatePos) : null;
           const headBlock = bot.blockAt ? bot.blockAt(new Vec3(targetX, floorY + 2, targetZ)) : null;
@@ -303,6 +305,7 @@ class SurvivalController {
     this._shelteredTickCount = 0;
 
     this.breachDetected = false;
+    this._failedFleeTargets = new Set();
 
     /** Stage 4 progression milestones */
     this.milestones = {
@@ -434,6 +437,7 @@ class SurvivalController {
     this._dawnWaitStartTime = null;
     this._shelteredTickCount = 0;
     this._fleeAttemptCount = 0;
+    this._failedFleeTargets = new Set();
     this.breachDetected = false;
     this.goalStack = [];
 
@@ -752,6 +756,7 @@ class SurvivalController {
       const isCleared = !hasHostiles && !isDamaged && fleeAttempts >= 1;
 
       if (isCleared || fleeAttempts >= 10) {
+        if (this._failedFleeTargets) this._failedFleeTargets.clear();
         if (this.goalStack.length > 0) {
           const restored = this.goalStack.pop();
           this.currentGoal = restored.goal;
@@ -791,7 +796,7 @@ class SurvivalController {
       });
 
       this._fleeAttemptCount = fleeAttempts + 1;
-      const safeTarget = findSafeFleeDestination(this.bot, threats, 12, 18);
+      const safeTarget = findSafeFleeDestination(this.bot, threats, 12, 18, this._failedFleeTargets);
 
       if (safeTarget && this.primitives?.navigator) {
         this.telemetry?.emit({
@@ -802,11 +807,12 @@ class SurvivalController {
           reason: 'evade_hostile_threat',
           details: { attempt: this._fleeAttemptCount, target: safeTarget },
         });
+        let navResult = null;
         try {
           if (this.primitives.navigator.goto) {
-            await this.primitives.navigator.goto({ x: safeTarget.x, y: safeTarget.y, z: safeTarget.z, range: 2.0 }, 6000);
+            navResult = await this.primitives.navigator.goto({ x: safeTarget.x, y: safeTarget.y, z: safeTarget.z, range: 2.0 }, 6000);
           } else if (this.primitives.navigator.navigate) {
-            await this.primitives.navigator.navigate(safeTarget.x, safeTarget.y, safeTarget.z, 2.0, 6000);
+            navResult = await this.primitives.navigator.navigate(safeTarget.x, safeTarget.y, safeTarget.z, 2.0, 6000);
           }
         } catch (err) {
           this.telemetry?.emit({
@@ -815,6 +821,11 @@ class SurvivalController {
             warning: 'evasion_navigation_failed',
             error: err.message,
           });
+        }
+        if (!navResult || navResult.outcome !== 'success') {
+          if (!this._failedFleeTargets) this._failedFleeTargets = new Set();
+          const candKey = `${Math.floor(safeTarget.x)},${Math.floor(safeTarget.y)},${Math.floor(safeTarget.z)}`;
+          this._failedFleeTargets.add(candKey);
         }
         if (!this.active || this.currentRunId !== runId) return;
         this._scheduleTick(100, runId);
