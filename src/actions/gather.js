@@ -289,8 +289,10 @@ function findSafeBlock(bot, matcher, maxDistance = 16, failureTracker = null, op
 
     // Elevation & Anti-trenching constraints:
     if (bot.entity?.position) {
-      const vertDelta = Math.abs(b.position.y - Math.floor(bot.entity.position.y));
-      if (vertDelta > 4) return false;
+      if (b.name === 'dirt' || b.name === 'grass_block') {
+        const vertDelta = Math.abs(b.position.y - Math.floor(bot.entity.position.y));
+        if (vertDelta > 4) return false;
+      }
       const horizDist = Math.hypot(b.position.x - bot.entity.position.x, b.position.z - bot.entity.position.z);
       // For adjacent blocks (within 2m of player), don't dig trenches below foot level (dy < -1)
       if (horizDist <= 2.0) {

@@ -1424,17 +1424,19 @@ class SurvivalController {
         return;
       }
 
-      if (this.currentGoal === 'stone_pickaxe' && plan.reason === 'no_exposed_stone_found') {
+      if ((this.currentGoal === 'stone_pickaxe' || this.currentGoal === 'wooden_pickaxe') &&
+          (plan.reason === 'no_exposed_stone_found' || plan.reason === 'no_accessible_log_found')) {
         const expendable = getExpendableBuildingBlocks(items);
         if (expendable < (this.options.targetReserve || 30)) {
+          const fromGoal = this.currentGoal;
           this.currentGoal = 'maintain_building_reserve';
           this.telemetry?.emit({
             event: 'controller_goal_switched',
             controllerRunId: runId,
             generation: this.generation,
-            from: 'stone_pickaxe',
+            from: fromGoal,
             to: 'maintain_building_reserve',
-            reason: 'stone_blocked_gathering_building_reserve',
+            reason: `${plan.reason}_gathering_building_reserve`,
           });
           this._scheduleTick(0, runId);
           return;
