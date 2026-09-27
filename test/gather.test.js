@@ -15,6 +15,7 @@ const {
   GRAVITY_BLOCK_NAMES,
 } = require('../src/actions/gather');
 const { ActionManager } = require('../src/actions/manager');
+const { FailureTracker } = require('../src/controller/failure_tracker');
 
 // ---------------------------------------------------------------------------
 // 1. Under-Feet Safety Checks
@@ -131,6 +132,48 @@ test('findSafeBlock — excludes blocks under feet and under sand', () => {
   const chosen = findSafeBlock(bot, 'dirt', 10);
   assert.notEqual(chosen, null);
   assert.deepEqual(chosen.position, { x: 0, y: 64, z: 1 });
+});
+
+test('findSafeBlock — prioritizes walkable elevation and rejects steep drops', () => {
+  const cliffBlock = { name: 'grass_block', position: { x: 3, y: 66, z: 0 } }; // dy = -4 from y=70
+  const flatBlock = { name: 'dirt', position: { x: 5, y: 70, z: 0 } }; // dy = 0
+
+  const bot = {
+    entity: { position: { x: 0, y: 70, z: 0 } },
+    blockAt: () => ({ name: 'air' }),
+    findBlock: ({ matching }) => {
+      // If cliffBlock matches, bot would mistakenly pick it without elevation filtering
+      if (matching(cliffBlock)) return cliffBlock;
+      if (matching(flatBlock)) return flatBlock;
+      return null;
+    },
+  };
+
+  const chosen = findSafeBlock(bot, 'dirt', 16);
+  assert.notEqual(chosen, null);
+  assert.deepEqual(chosen.position, { x: 5, y: 70, z: 0 }, 'Should select flat surface block instead of cliff drop');
+});
+
+test('findSafeBlock — respects column cooldown in failureTracker', () => {
+  const colBlock1 = { name: 'dirt', position: { x: 4, y: 70, z: 2 } };
+  const colBlock2 = { name: 'dirt', position: { x: 8, y: 70, z: 2 } };
+
+  const bot = {
+    entity: { position: { x: 0, y: 70, z: 0 } },
+    blockAt: () => ({ name: 'air' }),
+    findBlock: ({ matching }) => {
+      if (matching(colBlock1)) return colBlock1;
+      if (matching(colBlock2)) return colBlock2;
+      return null;
+    },
+  };
+
+  const tracker = new FailureTracker();
+  tracker.recordFailure('gather:col:4,2', 'column_unreachable', 30000);
+
+  const chosen = findSafeBlock(bot, 'dirt', 16, tracker);
+  assert.notEqual(chosen, null);
+  assert.deepEqual(chosen.position, { x: 8, y: 70, z: 2 }, 'Should bypass column on cooldown and select colBlock2');
 });
 
 // ---------------------------------------------------------------------------

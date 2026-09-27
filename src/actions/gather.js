@@ -266,6 +266,22 @@ function computeInventoryDelta(before, after) {
  * @returns {import('prismarine-block').Block | null}
  */
 function findSafeBlock(bot, matcher, maxDistance = 16, failureTracker = null, options = {}) {
+  // If gathering dirt or grass_block without an explicit elevationRange, do a two-pass search:
+  // Pass 1: immediate walkable ground elevation [-1, 2]
+  // Pass 2: safe traversable elevation [-2, 3] (avoiding cliffs and deep drops)
+  if ((matcher === 'dirt' || matcher === 'grass_block') && !options.elevationRange && bot?.entity?.position) {
+    const immediate = findSafeBlock(bot, matcher, maxDistance, failureTracker, {
+      ...options,
+      elevationRange: [-1, 2],
+    });
+    if (immediate) return immediate;
+
+    return findSafeBlock(bot, matcher, maxDistance, failureTracker, {
+      ...options,
+      elevationRange: [-2, 3],
+    });
+  }
+
   // If gathering dirt, prefer virgin grass_block on the surface first to avoid trenching
   if (matcher === 'dirt' && options.noGrassFallback !== true) {
     const grassBlock = findSafeBlock(bot, 'grass_block', maxDistance, failureTracker, { ...options, noGrassFallback: true });
@@ -293,15 +309,15 @@ function findSafeBlock(bot, matcher, maxDistance = 16, failureTracker = null, op
 
     // Elevation & Anti-trenching constraints:
     if (bot.entity?.position) {
+      const botGroundY = Math.floor(bot.entity.position.y);
+      const dy = b.position.y - botGroundY;
       if (b.name === 'dirt' || b.name === 'grass_block') {
-        const vertDelta = Math.abs(b.position.y - Math.floor(bot.entity.position.y));
-        if (vertDelta > 4) return false;
+        const [minDy, maxDy] = options.elevationRange || [-2, 3];
+        if (dy < minDy || dy > maxDy) return false;
       }
       const horizDist = Math.hypot(b.position.x - bot.entity.position.x, b.position.z - bot.entity.position.z);
       // For adjacent blocks (within 2m of player), don't dig trenches below foot level (dy < -1)
       if (horizDist <= 2.0) {
-        const botGroundY = Math.floor(bot.entity.position.y);
-        const dy = b.position.y - botGroundY;
         if (dy < -1) return false;
       }
     }
@@ -331,6 +347,8 @@ function findSafeBlock(bot, matcher, maxDistance = 16, failureTracker = null, op
     if (failureTracker) {
       const key = FailureTracker.makeKey('gather', b.position);
       if (failureTracker.isOnCooldown(key)) return false;
+      const colKey = `gather:col:${Math.floor(b.position.x)},${Math.floor(b.position.z)}`;
+      if (failureTracker.isOnCooldown(colKey)) return false;
     }
 
     return true;

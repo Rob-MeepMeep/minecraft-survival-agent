@@ -407,6 +407,8 @@ function findExposedStone(bot, failureTracker, maxDistance = 32) {
     maxDistance,
     useExtraInfo: (b) => {
       // Must not be on cooldown
+      const colKey = `gather:col:${Math.floor(b.position.x)},${Math.floor(b.position.z)}`;
+      if (failureTracker && failureTracker.isOnCooldown(colKey)) return false;
       const key = FailureTracker.makeKey('gather', { x: b.position.x, y: b.position.y, z: b.position.z, block: b.name });
       if (failureTracker && failureTracker.isOnCooldown(key)) return false;
 
@@ -826,8 +828,10 @@ class GoalPlanner {
               if (!below || ['air', 'cave_air', 'water', 'lava'].includes(below.name)) {
                 return false;
               }
+              const colKey = `gather:col:${Math.floor(b.position.x)},${Math.floor(b.position.z)}`;
+              if (failureTracker && failureTracker.isOnCooldown(colKey)) return false;
               const key = FailureTracker.makeKey('gather', b.position);
-              return !failureTracker.isOnCooldown(key);
+              return !failureTracker || !failureTracker.isOnCooldown(key);
             },
           });
           if (targetBlock) gatherPos = targetBlock.position;
