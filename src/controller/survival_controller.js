@@ -1581,7 +1581,7 @@ class SurvivalController {
         }
       } else {
         this.failureTracker.recordFailure(plan.targetKey, result.reason || result.outcome);
-        if (result.reason === 'could_not_reach_block' && plan.args?.[0]?.x !== undefined) {
+        if ((result.reason === 'could_not_reach_block' || result.outcome === 'timed_out' || result.reason === 'unreachable') && plan.args?.[0]?.x !== undefined) {
           const { x, z } = plan.args[0];
           const colKey = `gather:col:${Math.floor(x)},${Math.floor(z)}`;
           this.failureTracker.recordFailure(colKey, 'column_unreachable', 30000);

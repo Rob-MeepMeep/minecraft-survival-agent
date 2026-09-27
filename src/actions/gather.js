@@ -289,6 +289,8 @@ function findSafeBlock(bot, matcher, maxDistance = 16, failureTracker = null, op
 
     // Elevation & Anti-trenching constraints:
     if (bot.entity?.position) {
+      const vertDelta = Math.abs(b.position.y - Math.floor(bot.entity.position.y));
+      if (vertDelta > 4) return false;
       const horizDist = Math.hypot(b.position.x - bot.entity.position.x, b.position.z - bot.entity.position.z);
       // For adjacent blocks (within 2m of player), don't dig trenches below foot level (dy < -1)
       if (horizDist <= 2.0) {
@@ -606,6 +608,27 @@ function createGatherer(bot, actionManager) {
 
       let approachThreatAborted = false;
       let approachInterval = null;
+      const clonePos = (p) => p ? (typeof p.clone === 'function' ? p.clone() : { x: p.x, y: p.y, z: p.z }) : null;
+      let lastApproachPos = clonePos(bot.entity?.position);
+      let lastApproachMoveTime = Date.now();
+      const stuckCheck = setInterval(() => {
+        if (signal.aborted) {
+          clearInterval(stuckCheck);
+          return;
+        }
+        const curr = bot.entity?.position;
+        if (curr && lastApproachPos) {
+          const moved = distance3D(curr, lastApproachPos);
+          if (moved > 0.5) {
+            lastApproachMoveTime = Date.now();
+            lastApproachPos = clonePos(curr);
+          } else if (Date.now() - lastApproachMoveTime > 4000) {
+            clearInterval(stuckCheck);
+            try { bot.pathfinder?.stop?.(); } catch {}
+          }
+        }
+      }, 500);
+
       if (options.safeOnly !== false) {
         approachInterval = setInterval(() => {
           if (hasHostileThreatNearby(bot, 7.0)) {
@@ -619,6 +642,7 @@ function createGatherer(bot, actionManager) {
         await bot.pathfinder.goto(reachGoal);
       } catch (err) {
         if (approachInterval) clearInterval(approachInterval);
+        clearInterval(stuckCheck);
         if (approachThreatAborted) {
           return {
             outcome: 'failed',
@@ -634,6 +658,7 @@ function createGatherer(bot, actionManager) {
         };
       } finally {
         if (approachInterval) clearInterval(approachInterval);
+        clearInterval(stuckCheck);
       }
 
       if (approachThreatAborted) {

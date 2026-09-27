@@ -1366,12 +1366,13 @@ class GoalPlanner {
           },
         });
 
-        // Pass 2: Fallback to any reachable log within 32 blocks
+        // Pass 2: Fallback to any reachable log within 32 blocks (constrained by vertical reachability)
         if (!block) {
           block = bot.findBlock({
             matching: logIds,
             maxDistance: 32,
             useExtraInfo: b => {
+              if (botY !== undefined && Math.abs(b.position.y - botY) > 5) return false;
               const colKey = `gather:col:${Math.floor(b.position.x)},${Math.floor(b.position.z)}`;
               if (failureTracker.isOnCooldown(colKey)) return false;
               const key = FailureTracker.makeKey('gather', { x: b.position.x, y: b.position.y, z: b.position.z, block: b.name });

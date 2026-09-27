@@ -18,9 +18,11 @@ function createSafeMovements(bot) {
     movements.canDig = false;
     movements.scafoldingBlocks = [];
     movements.allow1by1towers = false;
+    movements.allowParkour = false;
+    movements.maxDropDown = 1;
     return movements;
   } catch {
-    return { canDig: false, scafoldingBlocks: [], allow1by1towers: false };
+    return { canDig: false, scafoldingBlocks: [], allow1by1towers: false, allowParkour: false, maxDropDown: 1 };
   }
 }
 
