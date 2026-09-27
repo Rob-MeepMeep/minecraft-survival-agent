@@ -448,9 +448,12 @@ async function runStage4Verification() {
     if (!runStarted) return;
     const bp = loadBlueprint();
     if (!bp || !bp.center) return;
-    if (survivalController.shelterSafetyClaim || survivalController.currentGoal === 'wait_out_night') {
+    if (survivalController.shelterSafetyClaim && survivalController.currentGoal === 'wait_out_night') {
       const pos = newB?.position || oldB?.position;
       if (pos && isShelterCoord(pos, bp.center)) {
+        if (Array.isArray(bp.exitCoordinates) && bp.exitCoordinates.some(c => c.x === Math.floor(pos.x) && c.y === Math.floor(pos.y) && c.z === Math.floor(pos.z))) {
+          return;
+        }
         if (!newB || newB.boundingBox !== 'block') {
           enclosureBreached = true;
           console.error(`🚨 BREACH DETECTED: Shelter block at (${pos.x}, ${pos.y}, ${pos.z}) broken!`);

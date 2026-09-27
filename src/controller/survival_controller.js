@@ -55,6 +55,21 @@ function isShelterCoordinate(pos, bp) {
   return false;
 }
 
+/**
+ * Checks whether a position is one of the designated exit doorway coordinates.
+ *
+ * @param {import('vec3').Vec3|object} pos
+ * @param {object} bp
+ * @returns {boolean}
+ */
+function isExitCoordinate(pos, bp) {
+  if (!pos || !bp || !Array.isArray(bp.exitCoordinates)) return false;
+  const px = Math.floor(pos.x);
+  const py = Math.floor(pos.y);
+  const pz = Math.floor(pos.z);
+  return bp.exitCoordinates.some(c => c.x === px && c.y === py && c.z === pz);
+}
+
 
 
 /**
@@ -252,6 +267,9 @@ class SurvivalController {
     this.active = false;
 
     /** @type {string} */
+    this.primaryGoal = 'stone_pickaxe';
+
+    /** @type {string} */
     this.status = 'idle';
 
     /** @type {number} */
@@ -306,11 +324,12 @@ class SurvivalController {
     // Attach blockUpdate listener for instantaneous shelter breach detection
     this._onBlockUpdate = (oldBlock, newBlock) => {
       if (!this.active) return;
-      if (this.currentGoal === 'wait_out_night' || this.shelterSafetyClaim) {
+      if (this.currentGoal === 'wait_out_night' && this.shelterSafetyClaim) {
         const bp = loadBlueprint();
         if (!bp || !bp.center) return;
         const pos = newBlock?.position || oldBlock?.position;
         if (pos && isShelterCoordinate(pos, bp)) {
+          if (isExitCoordinate(pos, bp)) return;
           if (!newBlock || newBlock.boundingBox !== 'block') {
             this.telemetry?.emit({
               event: 'shelter_breached',
@@ -423,6 +442,7 @@ class SurvivalController {
     this.currentRunId = runId;
     this.active = true;
     this.status = 'running';
+    this.primaryGoal = goal;
     this.currentGoal = goal;
     this.shelterSafetyClaim = false;
 
@@ -888,8 +908,9 @@ class SurvivalController {
 
     // 2. Arbitration: Active Shelter Completion / Dusk Preemption (10000 <= timeOfDay < 23000)
     if (timeOfDay !== null && timeOfDay >= SHELTER_PREP_TIME && timeOfDay < DAWN_TIME && !isShelterGoal) {
+      const suspendedGoal = (this.currentGoal === 'observe_daylight') ? (this.primaryGoal || 'stone_pickaxe') : this.currentGoal;
       const frame = {
-        goal: this.currentGoal,
+        goal: suspendedGoal,
         args: [],
         trigger: 'dusk_preemption',
         completionPredicate: { type: 'daylight' },
@@ -1133,6 +1154,8 @@ class SurvivalController {
       }
 
       if (this.currentGoal === 'wait_out_night') {
+        this.shelterSafetyClaim = false;
+        this._recordMilestone('night_survived', runId);
         this.currentGoal = 'leave_shelter';
         const bp = loadBlueprint();
         if (bp) {
@@ -1153,38 +1176,35 @@ class SurvivalController {
       if (this.currentGoal === 'leave_shelter') {
         this.shelterSafetyClaim = false;
         this._recordMilestone('dawn_exit_completed', runId);
-        this._recordMilestone('night_survived', runId);
         const bp = loadBlueprint();
         if (bp) {
           bp.buildState = 'completed';
           saveBlueprint(bp);
         }
 
-
-        // Resume daytime goal if suspended on stack
+        // Resume daytime progression goal
+        let nextGoal = this.primaryGoal || 'stone_pickaxe';
+        let predicate = { type: 'daylight' };
         if (this.goalStack.length > 0) {
           const restored = this.goalStack.pop();
-          this.telemetry?.emit({
-            event: 'controller_goal_resumed',
-            controllerRunId: runId,
-            generation: this.generation,
-            goal: restored.goal,
-            predicate: restored.completionPredicate,
-            stackDepth: this.goalStack.length,
-          });
-          this.currentGoal = restored.goal;
-          this._scheduleTick(0, runId);
-          return;
+          if (restored.goal && restored.goal !== 'observe_daylight') {
+            nextGoal = restored.goal;
+          }
+          if (restored.completionPredicate) {
+            predicate = restored.completionPredicate;
+          }
         }
 
         this.telemetry?.emit({
-          event: 'controller_goal_completed',
+          event: 'controller_goal_resumed',
           controllerRunId: runId,
           generation: this.generation,
-          goal: 'leave_shelter',
-          dispatchedActions: this.failureTracker.getDispatchedActions(),
+          goal: nextGoal,
+          predicate,
+          stackDepth: this.goalStack.length,
         });
-        await this.stop('completed');
+        this.currentGoal = nextGoal;
+        this._scheduleTick(0, runId);
         return;
       }
 
