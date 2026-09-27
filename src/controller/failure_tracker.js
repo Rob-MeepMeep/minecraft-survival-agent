@@ -13,7 +13,7 @@ class FailureTracker {
   constructor(options = {}) {
     this.defaultCooldownMs = options.defaultCooldownMs ?? 10000;
     this.maxDispatchedActions = options.maxDispatchedActions ?? 500;
-    this.maxDispatchedPerGoal = options.maxDispatchedPerGoal ?? 150;
+    this.maxDispatchedPerGoal = options.maxDispatchedPerGoal ?? 500;
 
     /** @type {Map<string, { count: number, lastFailedAt: number, cooldownUntil: number, lastReason: string }>} */
     this.failures = new Map();

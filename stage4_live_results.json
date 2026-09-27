@@ -1,42 +1,20 @@
 {
-  "runId": "stage4-1790497065135",
-  "sourceCommit": "97cb09d2011e1a75ec766841c8eaf0f8fca27a57",
+  "runId": "stage4-1790499905746",
+  "sourceCommit": "65f8d473e96a71a5f85f0eb6a24d4b0f09e4b0cf",
   "verdict": "STAGE_4_FAILED",
   "passedGates": 4,
   "totalGates": 11,
-  "totalAdvancingTicks": 1440,
-  "durationSeconds": 72,
+  "totalAdvancingTicks": 14153,
+  "durationSeconds": 707,
   "finalVitals": {
     "health": 20,
     "food": 20,
     "saturation": 5
   },
   "finalInventory": [],
-  "milestones": [
-    {
-      "milestone": "wooden_pickaxe",
-      "timestamp": "2026-09-27T08:25:22.896Z",
-      "worldAge": 2041799,
-      "timeOfDay": 1798,
-      "worldAgeDelta": 1160,
-      "expectedModularTimeOfDay": 1798,
-      "drift": 0,
-      "position": {
-        "x": 53.4,
-        "y": 89,
-        "z": 12.7
-      },
-      "vitals": {
-        "health": 9.333332061767578,
-        "food": 17,
-        "saturation": 0
-      },
-      "currentGoal": "stone_pickaxe",
-      "goalStackDepth": 0
-    }
-  ],
+  "milestones": [],
   "controllerMilestones": {
-    "woodenPickaxeAchieved": true,
+    "woodenPickaxeAchieved": false,
     "stonePickaxeAchieved": false,
     "foodReserveAcquired": false,
     "buildingReserveAcquired": false,
@@ -63,7 +41,7 @@
     {
       "gate": "Continuous Game Tick Advancement",
       "passed": false,
-      "detail": "1440 continuous natural advancing ticks (>= 24000) without skips"
+      "detail": "14153 continuous natural advancing ticks (>= 24000) without skips"
     },
     {
       "gate": "Natural Resource Acquisition",
@@ -102,143 +80,102 @@
     }
   ],
   "metadata": {
-    "runId": "stage4-1790497065135",
-    "sourceCommit": "97cb09d2011e1a75ec766841c8eaf0f8fca27a57",
+    "runId": "stage4-1790499905746",
+    "sourceCommit": "65f8d473e96a71a5f85f0eb6a24d4b0f09e4b0cf",
     "worldIdentity": "overworld",
     "seed": null,
     "minecraftVersion": "26.1",
     "mineflayerVersion": "4.39.0",
     "nodeVersion": "v24.18.0",
     "server": "localhost:61375",
-    "worldAge": 2040639,
-    "timeOfDay": 638,
+    "worldAge": 2089519,
+    "timeOfDay": 1518,
     "biome": "plains",
     "weather": "clear",
     "difficulty": "normal",
     "position": {
-      "x": 53.5,
-      "y": 88,
-      "z": 35.5
+      "x": 42.5,
+      "y": 96,
+      "z": 38.5
     },
     "health": 20,
     "food": 20,
     "saturation": 5,
     "inventorySnapshot": [],
-    "nearbyEntities": [
-      {
-        "name": "skeleton",
-        "distance": 27.7
-      },
-      {
-        "name": "skeleton",
-        "distance": 6.2
-      },
-      {
-        "name": "zombie",
-        "distance": 4.8
-      },
-      {
-        "name": "zombie",
-        "distance": 31.4
-      },
-      {
-        "name": "zombie",
-        "distance": 6.5
-      },
-      {
-        "name": "creeper",
-        "distance": 20.1
-      },
-      {
-        "name": "zombie",
-        "distance": 31.9
-      },
-      {
-        "name": "item",
-        "distance": 23.2
-      },
-      {
-        "name": "item",
-        "distance": 23.7
-      }
-    ],
+    "nearbyEntities": [],
     "nearbyResources": [
       "vine",
       "jungle_leaves",
       "jungle_log",
       "oak_leaves",
-      "short_grass",
-      "oak_log",
-      "grass_block",
-      "dirt",
-      "fern"
+      "oak_log"
     ],
     "preflightResults": {
       "command_attempted": [
         {
           "command": "/gamerule doDaylightCycle true",
-          "timestamp": "2026-09-27T08:24:24.525Z"
+          "timestamp": "2026-09-27T09:05:09.274Z"
         },
         {
           "command": "/gamerule doMobSpawning true",
-          "timestamp": "2026-09-27T08:24:24.530Z"
+          "timestamp": "2026-09-27T09:05:09.276Z"
         },
         {
           "command": "/weather clear",
-          "timestamp": "2026-09-27T08:24:24.530Z"
+          "timestamp": "2026-09-27T09:05:09.276Z"
         },
         {
           "command": "/clear @s",
-          "timestamp": "2026-09-27T08:24:24.531Z"
+          "timestamp": "2026-09-27T09:05:09.277Z"
         }
       ],
       "command_accepted": [
         {
           "command": "/gamerule doMobSpawning true",
           "response": "gamerule doDaylightCycle true<--[HERE]",
-          "timestamp": "2026-09-27T08:24:24.530Z"
+          "timestamp": "2026-09-27T09:05:09.276Z"
         }
       ],
       "command_rejected": [
         {
           "command": "/gamerule doDaylightCycle true",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-27T08:24:24.525Z"
+          "timestamp": "2026-09-27T09:05:09.274Z"
         },
         {
           "command": "/weather clear",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-27T08:24:24.530Z"
+          "timestamp": "2026-09-27T09:05:09.276Z"
         },
         {
           "command": "/clear @s",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-27T08:24:24.531Z"
+          "timestamp": "2026-09-27T09:05:09.277Z"
         }
       ],
       "server_response": [
         {
           "command": "/gamerule doDaylightCycle true",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-27T08:24:24.525Z"
+          "timestamp": "2026-09-27T09:05:09.274Z"
         },
         {
           "command": "/gamerule doMobSpawning true",
           "response": "gamerule doDaylightCycle true<--[HERE]",
-          "timestamp": "2026-09-27T08:24:24.530Z"
+          "timestamp": "2026-09-27T09:05:09.276Z"
         },
         {
           "command": "/weather clear",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-27T08:24:24.530Z"
+          "timestamp": "2026-09-27T09:05:09.276Z"
         },
         {
           "command": "/clear @s",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-27T08:24:24.531Z"
+          "timestamp": "2026-09-27T09:05:09.277Z"
         }
       ]
     }
   },
-  "evidencePath": "artifacts\\stage4-runs\\stage4-1790497065135"
+  "evidencePath": "artifacts\\stage4-runs\\stage4-1790499905746"
 }

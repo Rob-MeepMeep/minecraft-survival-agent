@@ -1351,14 +1351,35 @@ class GoalPlanner {
 
       if (!simulatedState && bot.findBlock) {
         const logIds = LOG_TYPES.map(name => bot.registry?.blocksByName?.[name]?.id).filter(Boolean);
-        const block = bot.findBlock({
+        const botY = bot.entity?.position?.y;
+
+        // Pass 1: Prioritize logs near player elevation (within +/- 4 blocks in Y)
+        let block = bot.findBlock({
           matching: logIds,
           maxDistance: 32,
           useExtraInfo: b => {
+            if (botY !== undefined && Math.abs(b.position.y - botY) > 4) return false;
+            const colKey = `gather:col:${Math.floor(b.position.x)},${Math.floor(b.position.z)}`;
+            if (failureTracker.isOnCooldown(colKey)) return false;
             const key = FailureTracker.makeKey('gather', { x: b.position.x, y: b.position.y, z: b.position.z, block: b.name });
             return !failureTracker.isOnCooldown(key);
           },
         });
+
+        // Pass 2: Fallback to any reachable log within 32 blocks
+        if (!block) {
+          block = bot.findBlock({
+            matching: logIds,
+            maxDistance: 32,
+            useExtraInfo: b => {
+              const colKey = `gather:col:${Math.floor(b.position.x)},${Math.floor(b.position.z)}`;
+              if (failureTracker.isOnCooldown(colKey)) return false;
+              const key = FailureTracker.makeKey('gather', { x: b.position.x, y: b.position.y, z: b.position.z, block: b.name });
+              return !failureTracker.isOnCooldown(key);
+            },
+          });
+        }
+
         if (block) {
           targetLog = block.name;
           targetPos = block.position;

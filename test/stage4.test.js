@@ -193,52 +193,58 @@ test('Stage 4 — Multi-Directional Alternate Exit Selection under Hostile Threa
 });
 
 test('Stage 4 — Bounded Dawn Wait and Exit Blocked Failure', async () => {
-  const events = [];
-  const telemetry = { emit: (e) => events.push(e) };
-  const center = { x: 10, y: 64, z: 10 };
-  const blueprint = createShelterBlueprint(center, { x: 0, y: 0, z: 1 }, 'dirt');
-  blueprint.buildState = 'waiting';
-  saveBlueprint(blueprint);
+  const tmpBp = path.join(process.cwd(), `.test_bp_dawn_${Date.now()}.json`);
+  process.env.SHELTER_BLUEPRINT_PATH = tmpBp;
 
-  // Bot surrounded by creepers on all 4 landings
-  const bot = {
-    blockAt: () => ({ name: 'dirt', boundingBox: 'block' }),
-    entity: { position: new Vec3(10.5, 64, 10.5) },
-    entities: {
-      1: { id: 1, name: 'creeper', type: 'creeper', position: new Vec3(10, 64, 12) },  // South (1.5m)
-      2: { id: 2, name: 'creeper', type: 'creeper', position: new Vec3(10, 64, 8) },   // North (2.5m)
-      3: { id: 3, name: 'creeper', type: 'creeper', position: new Vec3(12, 64, 10) },  // East (1.5m)
-      4: { id: 4, name: 'creeper', type: 'creeper', position: new Vec3(8, 64, 10) },   // West (2.5m)
-    },
-    inventory: { items: () => [{ name: 'bread', count: 2 }] },
-    food: 20,
-    health: 20,
-    time: { timeOfDay: 23100, age: 30000 },
-  };
+  try {
+    const events = [];
+    const telemetry = { emit: (e) => events.push(e) };
+    const center = { x: 10, y: 64, z: 10 };
+    const blueprint = createShelterBlueprint(center, { x: 0, y: 0, z: 1 }, 'dirt');
+    blueprint.buildState = 'waiting';
+    saveBlueprint(blueprint);
 
-  const controller = new SurvivalController({
-    bot,
-    actionManager: { isBusy: false },
-    telemetry,
-    options: {
-      dawnWaitTimeoutMs: 50,
-      exitTimeoutMs: 100,
-    },
-  });
+    // Bot surrounded by creepers on all 4 landings
+    const bot = {
+      blockAt: () => ({ name: 'dirt', boundingBox: 'block' }),
+      entity: { position: new Vec3(10.5, 64, 10.5) },
+      entities: {
+        1: { id: 1, name: 'creeper', type: 'creeper', position: new Vec3(10, 64, 12) },  // South (1.5m)
+        2: { id: 2, name: 'creeper', type: 'creeper', position: new Vec3(10, 64, 8) },   // North (2.5m)
+        3: { id: 3, name: 'creeper', type: 'creeper', position: new Vec3(12, 64, 10) },  // East (1.5m)
+        4: { id: 4, name: 'creeper', type: 'creeper', position: new Vec3(8, 64, 10) },   // West (2.5m)
+      },
+      inventory: { items: () => [{ name: 'bread', count: 2 }] },
+      food: 20,
+      health: 20,
+      time: { timeOfDay: 23100, age: 30000 },
+    };
 
-  await controller.start('leave_shelter');
-  await new Promise(r => setTimeout(r, 60));
+    const controller = new SurvivalController({
+      bot,
+      actionManager: { isBusy: false },
+      telemetry,
+      options: {
+        dawnWaitTimeoutMs: 50,
+        exitTimeoutMs: 100,
+      },
+    });
 
-  // Trigger ticks until exitTimeoutMs expires
-  controller._dawnWaitStartTime = Date.now() - 150; // force timeout expiry
-  await controller._tick(controller.currentRunId);
+    await controller.start('leave_shelter');
+    await new Promise(r => setTimeout(r, 60));
 
-  assert.strictEqual(controller.status, 'failed_unsafe');
-  assert.strictEqual(controller.shelterSafetyClaim, false);
-  const stopEvent = events.find(e => e.event === 'controller_stop' && e.reason === 'exit_blocked');
-  assert.ok(stopEvent, 'Expected exit_blocked controller_stop event');
+    // Trigger ticks until exitTimeoutMs expires
+    controller._dawnWaitStartTime = Date.now() - 150; // force timeout expiry
+    await controller._tick(controller.currentRunId);
 
-  clearBlueprint();
+    assert.strictEqual(controller.status, 'failed_unsafe');
+    assert.strictEqual(controller.shelterSafetyClaim, false);
+    const stopEvent = events.find(e => e.event === 'controller_stop' && e.reason === 'exit_blocked');
+    assert.ok(stopEvent, 'Expected exit_blocked controller_stop event');
+  } finally {
+    delete process.env.SHELTER_BLUEPRINT_PATH;
+    try { if (fs.existsSync(tmpBp)) fs.unlinkSync(tmpBp); } catch {}
+  }
 });
 
 test('Stage 4 — Real-Time BlockUpdate Shelter Breach Detection', () => {
