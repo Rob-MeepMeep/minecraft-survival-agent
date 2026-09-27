@@ -6,4 +6,9 @@ logs/
 *.corrupt-*
 .shelter_blueprint.json*
 .shelter_test_*
-artifacts/
+artifacts/*
+!artifacts/stage4-runs/
+artifacts/stage4-runs/**
+!artifacts/stage4-runs/*/
+!artifacts/stage4-runs/*/*.json
+!artifacts/stage4-runs/*/*.gz

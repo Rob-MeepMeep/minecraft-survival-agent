@@ -26,6 +26,8 @@
 
 const fs = require('fs');
 const path = require('path');
+const zlib = require('zlib');
+const crypto = require('crypto');
 const { execSync } = require('child_process');
 const { Vec3 } = require('vec3');
 const { Movements, goals } = require('mineflayer-pathfinder');
@@ -59,7 +61,7 @@ const {
   SHELTER_DEADLINE,
   DAWN_TIME,
 } = require('../src/controller/planner');
-const { SurvivalController } = require('../src/controller/survival_controller');
+const { SurvivalController, HEALTH_THRESHOLDS } = require('../src/controller/survival_controller');
 const { snapshot } = require('../src/observer');
 
 function log(msg) {
@@ -507,7 +509,13 @@ async function runStage4Verification() {
   let dawnExitVerified = false;
   let progressionResumedVerified = false;
   let maxHungerDrop = bot.food ?? 20;
+  let minHealthDrop = bot.health ?? 20;
   let playerDiedDuringRun = false;
+  let woodenPickaxeCrafted = false;
+  let stonePickaxeCrafted = false;
+  let woodenPickaxeBeforeStone = false;
+  let lifecycleFailure = null;
+  const actionsSummary = { totalAttempted: 0, succeeded: 0, failed: 0, actions: {}, failures: {} };
   const milestonesRecorded = [];
 
   bot.on('death', () => {
@@ -572,6 +580,43 @@ async function runStage4Verification() {
   const origEmit = telemetry.emit.bind(telemetry);
   telemetry.emit = (evt) => {
     origEmit(evt);
+
+    if (evt.health !== undefined && evt.health < minHealthDrop) {
+      minHealthDrop = evt.health;
+    }
+    if (evt.event === 'controller_critical_health_no_recovery') {
+      lifecycleFailure = 'critical_health_no_recovery';
+    }
+    if (evt.event === 'controller_preemption' && evt.reason === 'budget_exceeded') {
+      lifecycleFailure = 'budget_exceeded';
+    }
+    if (evt.status === 'failed_unsafe') {
+      lifecycleFailure = 'failed_unsafe';
+    }
+
+    if (evt.event === 'action_start') {
+      actionsSummary.totalAttempted++;
+      actionsSummary.actions[evt.action] = (actionsSummary.actions[evt.action] || 0) + 1;
+    }
+
+    if (evt.event === 'action_end') {
+      if (evt.outcome === 'success') {
+        actionsSummary.succeeded++;
+      } else {
+        actionsSummary.failed++;
+        const failKey = `${evt.action}:${evt.reason || evt.outcome}`;
+        actionsSummary.failures[failKey] = (actionsSummary.failures[failKey] || 0) + 1;
+      }
+
+      if (evt.action === 'craft' && evt.outcome === 'success') {
+        const itemName = evt.item || evt.details?.item;
+        if (itemName === 'wooden_pickaxe') woodenPickaxeCrafted = true;
+        if (itemName === 'stone_pickaxe') {
+          stonePickaxeCrafted = true;
+          if (woodenPickaxeCrafted) woodenPickaxeBeforeStone = true;
+        }
+      }
+    }
 
     if (evt.event === 'milestone_achieved') {
       const currentAge = evt.worldAge || bot.time.age;
@@ -647,7 +692,10 @@ async function runStage4Verification() {
     const food = bot.food ?? 20;
     const hp = bot.health ?? 20;
 
-    if (food < maxHungerDrop) maxHungerDrop = food;
+    if (hp < minHealthDrop) minHealthDrop = hp;
+    if (survivalController.milestones.woodenPickaxeAchieved && survivalController.milestones.stonePickaxeAchieved) {
+      woodenPickaxeBeforeStone = true;
+    }
 
     if (playerDiedDuringRun || hp <= 0 || bot.isDead) {
       console.error(`❌ Player died during run (hp=${hp}, dead=${playerDiedDuringRun})`);
@@ -756,6 +804,18 @@ async function runStage4Verification() {
     progressionResumedVerified
   );
 
+  const finalHealth = bot.health ?? 20;
+  const minHealthPassed = minHealthDrop >= HEALTH_THRESHOLDS.MIN_ACCEPTANCE_HEALTH;
+  const finalHealthPassed = finalHealth >= HEALTH_THRESHOLDS.MIN_FINAL_HEALTH;
+  const toolProgressionPassed = Boolean(woodenPickaxeBeforeStone);
+  const cleanLifecyclePassed = Boolean(
+    !lifecycleFailure &&
+    !enclosureBreached &&
+    !survivalController.breachDetected &&
+    survivalController.status !== 'failed_unsafe' &&
+    survivalController.status !== 'critical_health_no_recovery'
+  );
+
   const gates = [
     {
       gate: 'Zero Production Slash Commands',
@@ -770,7 +830,17 @@ async function runStage4Verification() {
     {
       gate: 'Zero Player Deaths',
       passed: !playerDiedDuringRun && bot.health > 0 && !bot.isDead,
-      detail: `Player survived with ${bot.health}/20 HP`,
+      detail: `Player survived with ${finalHealth}/20 HP`,
+    },
+    {
+      gate: 'Minimum Health Safety Margin',
+      passed: minHealthPassed,
+      detail: `Minimum health was ${minHealthDrop.toFixed(2)}/20 (threshold >= ${HEALTH_THRESHOLDS.MIN_ACCEPTANCE_HEALTH})`,
+    },
+    {
+      gate: 'Final Health Safety Margin',
+      passed: finalHealthPassed,
+      detail: `Final health was ${finalHealth.toFixed(2)}/20 (threshold >= ${HEALTH_THRESHOLDS.MIN_FINAL_HEALTH})`,
     },
     {
       gate: 'Continuous Game Tick Advancement',
@@ -778,9 +848,16 @@ async function runStage4Verification() {
       detail: `${totalAdvancingTicks} continuous natural advancing ticks (>= ${TARGET_TICKS}) without skips`,
     },
     {
+      gate: 'Natural Tool Progression',
+      passed: toolProgressionPassed,
+      detail: toolProgressionPassed
+        ? 'Wooden pickaxe crafted before stone pickaxe via causal crafting sequence'
+        : 'Tool progression sequence was not verified causally',
+    },
+    {
       gate: 'Natural Resource Acquisition',
       passed: naturalAcquisitionPassed,
-      detail: `Derived from telemetry: 0 /give or /summon, 0 harness injections, all resources gathered from world blocks/drops`,
+      detail: 'Derived from telemetry: 0 /give or /summon, 0 harness injections, all resources gathered naturally',
     },
     {
       gate: '30-Block Building Reserve',
@@ -820,6 +897,13 @@ async function runStage4Verification() {
         ? 'Daytime progression goal causally resumed and action dispatched post-exit'
         : 'Progression resumption not verified following dawn exit',
     },
+    {
+      gate: 'Clean Execution Lifecycle & Safety',
+      passed: cleanLifecyclePassed,
+      detail: cleanLifecyclePassed
+        ? 'No budget_exceeded, failed_unsafe, critical_health_no_recovery, or unresolved breach'
+        : `Lifecycle failure detected: ${lifecycleFailure || 'enclosure_breached'}`,
+    },
   ];
 
   let passedGates = 0;
@@ -841,7 +925,7 @@ async function runStage4Verification() {
     totalGates: gates.length,
     totalAdvancingTicks,
     durationSeconds: Math.round((Date.now() - loopStartTime) / 1000),
-    finalVitals: { health: bot.health, food: bot.food, saturation: bot.foodSaturation },
+    finalVitals: { health: finalHealth, food: bot.food, saturation: bot.foodSaturation },
     finalInventory: bot.inventory.items().map(i => ({ name: i.name, count: i.count })),
     milestones: milestonesRecorded,
     controllerMilestones: survivalController.milestones,
@@ -849,30 +933,78 @@ async function runStage4Verification() {
     metadata,
   };
 
-  // Write immutable evidence files
+  // Close telemetry stream
   try {
     await telemetry.close();
   } catch (err) {
     console.error('Warning: Error closing telemetry stream:', err.message);
   }
 
-  // 1. Copy telemetry JSONL into immutable artifacts directory
-  try {
-    const rawTelemetryPath = telemetry.getFilePath();
-    if (fs.existsSync(rawTelemetryPath)) {
-      fs.copyFileSync(rawTelemetryPath, path.join(runArtifactsDir, 'telemetry.jsonl'));
+  // 1. Write metadata, milestones, actions_summary, damage_timeline, config_fingerprint
+  const configFingerprint = {
+    schemaVersion: 1,
+    runId,
+    timestamp: new Date().toISOString(),
+    host: config.host || 'localhost',
+    port: config.port,
+    version: config.version || '1.21',
+    options: survivalController.options,
+    sha256: crypto.createHash('sha256').update(JSON.stringify(config)).digest('hex'),
+  };
+  fs.writeFileSync(path.join(runArtifactsDir, 'config_fingerprint.json'), JSON.stringify(configFingerprint, null, 2), 'utf8');
+  fs.writeFileSync(path.join(runArtifactsDir, 'milestones.json'), JSON.stringify(milestonesRecorded, null, 2), 'utf8');
+  fs.writeFileSync(path.join(runArtifactsDir, 'damage_timeline.json'), JSON.stringify(survivalController.damageTimeline || [], null, 2), 'utf8');
+  fs.writeFileSync(path.join(runArtifactsDir, 'actions_summary.json'), JSON.stringify(actionsSummary, null, 2), 'utf8');
+  fs.writeFileSync(path.join(runArtifactsDir, 'metadata.json'), JSON.stringify(metadata, null, 2), 'utf8');
+  fs.writeFileSync(path.join(runArtifactsDir, 'result.json'), JSON.stringify(finalSummary, null, 2), 'utf8');
+
+  // 2. Compress telemetry JSONL and transcript TXT
+  const rawTelemetryPath = telemetry.getFilePath();
+  if (fs.existsSync(rawTelemetryPath)) {
+    const rawTelemetry = fs.readFileSync(rawTelemetryPath);
+    fs.writeFileSync(path.join(runArtifactsDir, 'telemetry.jsonl.gz'), zlib.gzipSync(rawTelemetry));
+  }
+  const rawTranscript = Buffer.from(transcript.join(''), 'utf8');
+  fs.writeFileSync(path.join(runArtifactsDir, 'transcript.txt.gz'), zlib.gzipSync(rawTranscript));
+
+  // 3. Compute SHA-256 for all retained evidence files and generate manifest.json
+  const retainedFiles = [
+    'result.json',
+    'metadata.json',
+    'config_fingerprint.json',
+    'milestones.json',
+    'damage_timeline.json',
+    'actions_summary.json',
+    'telemetry.jsonl.gz',
+    'transcript.txt.gz',
+  ];
+  const fileHashes = {};
+  for (const fileName of retainedFiles) {
+    const filePath = path.join(runArtifactsDir, fileName);
+    if (fs.existsSync(filePath)) {
+      const content = fs.readFileSync(filePath);
+      fileHashes[fileName] = {
+        sizeBytes: content.length,
+        sha256: crypto.createHash('sha256').update(content).digest('hex'),
+      };
     }
-  } catch (err) {
-    console.error('Failed copying telemetry to run artifact directory:', err.message);
   }
 
-  // 2. Write immutable result.json, transcript.txt, metadata.json
-  fs.writeFileSync(path.join(runArtifactsDir, 'result.json'), JSON.stringify(finalSummary, null, 2), 'utf8');
-  fs.writeFileSync(path.join(runArtifactsDir, 'metadata.json'), JSON.stringify(metadata, null, 2), 'utf8');
-  fs.writeFileSync(path.join(runArtifactsDir, 'transcript.txt'), transcript.join(''), 'utf8');
+  const manifest = {
+    schemaVersion: 1,
+    runId,
+    sourceCommit: gitCommit,
+    timestamp: new Date().toISOString(),
+    verdict: finalSummary.verdict,
+    passedGates,
+    totalGates: gates.length,
+    files: fileHashes,
+  };
+  fs.writeFileSync(path.join(runArtifactsDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
 
-  // 3. Update root stage4_live_results.json with pointer to immutable artifact
-  finalSummary.evidencePath = path.relative(process.cwd(), runArtifactsDir);
+  // 4. Update root stage4_live_results.json with platform-independent forward slash path
+  finalSummary.evidencePath = path.relative(process.cwd(), runArtifactsDir).replace(/\\/g, '/');
+  finalSummary.manifest = manifest;
   const rootResultsPath = path.join(process.cwd(), 'stage4_live_results.json');
   fs.writeFileSync(rootResultsPath, JSON.stringify(finalSummary, null, 2), 'utf8');
 

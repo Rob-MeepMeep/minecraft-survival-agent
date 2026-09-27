@@ -181,8 +181,12 @@ function hasHostileThreatNearby(bot, minDistance = 8.0, pos = null, rangedDistan
       continue;
     }
 
-    // Spiders are neutral in daylight unless within immediate self-defense range (< 3m)
-    if ((type === 'spider' || type === 'cave_spider') && isDaylight) {
+    const isAggressive = Boolean(
+      bot._activeAggressors && (bot._activeAggressors.has(ent.id) || bot._activeAggressors.has(type))
+    );
+
+    // Spiders are neutral in daylight unless within immediate self-defense range (< 3m) or actively aggressive
+    if ((type === 'spider' || type === 'cave_spider') && isDaylight && !isAggressive) {
       if (d <= 3.0) return true;
       continue;
     }

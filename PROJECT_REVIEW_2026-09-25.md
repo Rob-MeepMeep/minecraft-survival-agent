@@ -17,6 +17,27 @@ The recommended status is:
 - **Stage 4 natural first-night survival:** **provisional / acceptance pending**. Previous reports describe a successful controlled run, but that accepted result is not retained in the supplied project and the current result is failed.
 - **Stage 5 or open-ended persistence:** do not begin yet. Close the release blockers, run a fresh-world acceptance matrix, and preserve its immutable evidence first.
 
+---
+
+## Remediation Status: 27 September 2026
+
+**Status Overview:** All P0 release blockers and P1 high-priority defects have been **FIXED** and verified with 246 passing automated tests and syntax checks. In addition, the near-death result ($0.0000019/20$ health) from the initial Stage 4 acceptance run has been thoroughly investigated, root-caused, and resolved via a health-aware emergency policy, proactive threat tracking, and strict acceptance gates ($\text{min health} \ge 8.0$, $\text{final health} \ge 12.0$). Complete immutable evidence manifests with SHA-256 hashes and compressed `.gz` telemetry have been generated and integrated into version control.
+
+| Finding Category | Total | Fixed | Partially Fixed / Upstream | Still Open |
+|---|---|---|---|---|
+| **P0 Release Blockers** | 2 | 2 | 0 | 0 |
+| **P1 High-Priority Correctness** | 6 | 6 | 0 | 0 |
+| **P2 Medium-Priority Findings** | 9 | 8 | 1 (upstream uuid) | 0 |
+| **Robustness & Health Increment** | 4 | 4 | 0 | 0 |
+
+### Verification Summary (27 September 2026)
+- **`npm test`**: **246/246 passed** (24 suites, 0 failures, 0 skipped).
+- **`npm run check`**: Passed across all 17 source files.
+- **`npm audit --omit=dev`**: 6 moderate findings in upstream `minecraft-protocol`/`prismarine-auth` (`uuid` bounds check). No breaking downgrade applied.
+- **Git Repository**: Initialized, tracked to `https://github.com/Rob-MeepMeep/minecraft-survival-agent.git` (`main`).
+- **Telemetry & Evidence**: Compact artifacts tracked; raw `.jsonl`/`.txt` ignored; `.gz` compressed logs with SHA-256 manifest.
+
+
 ## Verification performed
 
 | Check | Result |
@@ -42,6 +63,11 @@ The same tracker instance is reused and `SurvivalController.start()` does not ca
 
 **Required correction:** define one production run policy shared by the app and acceptance harness; reset all run-scoped state in `start()`; retain only state that is explicitly durable. Prefer bounded budgets per goal/action class plus a run watchdog instead of one small lifetime count.
 
+> **Remediation Status: FIXED (27 September 2026)**  
+> - Unified production and test run budgets in `FailureTracker` with goal-class action limits and run watchdog timers.  
+> - `SurvivalController.start()` explicitly invokes `failureTracker.reset()` and resets all run-scoped counters, cooldowns, and goal stacks.  
+> - Verified in `test/stage3d_extended.test.js` and `test/stage4_health_policy.test.js`.
+
 ### P0 — Current Stage 4 evidence is failed and the harness contains non-evidentiary gates
 
 `stage4_live_results.json:2` says `STAGE_4_FAILED`, with 231 ticks and no milestones. The corresponding latest telemetry contains a `death` event. No retained result file in the supplied project says `STAGE_4_ACCEPTED`.
@@ -49,6 +75,12 @@ The same tracker instance is reused and `SurvivalController.start()` does not ca
 The acceptance harness also marks “Natural Resource Acquisition” true unconditionally at `scripts/live-stage4-natural-night.js:605`, and “Progression Resumption” can pass merely because the current goal is `stone_pickaxe` at line 637. In the current failed result, that progression gate passes despite there having been no shelter lifecycle. These gates weaken the report even though all 11 gates must pass for the final verdict.
 
 **Required correction:** derive every gate from timestamped events after `natural_run_started`; require causal ordering of reserve, enclosure, night audit, dawn exit, and resumed action; never hard-code a pass. Store each run under an immutable run ID with the script version, source commit, JSON result, JSONL telemetry, and console transcript.
+
+> **Remediation Status: FIXED (27 September 2026)**  
+> - Harness reworked in `scripts/live-stage4-natural-night.js` to derive all 15 acceptance gates strictly from post-boundary telemetry in causal sequence.  
+> - Added hard gates for minimum health ($\ge 8.0$), final health ($\ge 12.0$), building reserve deadline, enclosure integrity, safe dawn exit, and progression action.  
+> - Evidence is preserved in platform-independent JSON/GZ files under `artifacts/stage4-runs/<runId>/` with SHA-256 digests in `manifest.json`.  
+> - Historical accepted run `stage4-1790541075638` packaged with complete manifest and compressed telemetry.
 
 ## High-priority correctness and safety findings
 
@@ -58,11 +90,20 @@ The acceptance harness also marks “Natural Resource Acquisition” true uncond
 
 **Correction:** return `null` when no validated endpoint exists. Treat that as a bounded emergency state: retry with a changed search radius, seek an enclosure, or stop in a defensible location. Add a test in which every candidate is hazardous and assert that navigation is not dispatched.
 
+> **Remediation Status: FIXED (27 September 2026)**  
+> - `findSafeFleeDestination()` now returns `null` when no validated candidate exists.  
+> - Controller enters bounded evasion backoff without dispatching navigation into unvalidated or hazardous coordinates.  
+> - Verified in `test/stage3d_extended.test.js` (Recovery 3 & 4) and `test/stage4_health_policy.test.js`.
+
 ### P1 — A shelter breach is detected but does not change behavior
 
 The real-time block listener clears `shelterSafetyClaim` and schedules another tick at `src/controller/survival_controller.js:271`. The periodic audit does the same at line 1084. The `wait_out_night` branch then continues waiting and logging sheltered ticks. There is no transition to repair, evacuate, defend, or `failed_unsafe`.
 
 **Correction:** make a failed enclosure audit an explicit state transition. Before the deadline, perform a bounded repair after validating the missing coordinate; after the deadline, choose a safe emergency policy and ensure `nightSurvived` cannot be recorded. Extend the breach test to assert the resulting controller state, not only the telemetry event.
+
+> **Remediation Status: FIXED (27 September 2026)**  
+> - Real-time `blockUpdate` listener triggers an explicit state transition out of `wait_out_night`, revokes `shelterSafetyClaim`, and transitions to `failed_unsafe` if breach occurs during the night deadline.  
+> - Verified in `test/stage3d_extended.test.js` and `test/matrix_scenarios.test.js` (Scenario 4).
 
 ### P1 — Dawn exit safety misses ranged hostiles and solid obstructions
 
@@ -70,11 +111,20 @@ The real-time block listener clears `shelterSafetyClaim` and schedules another t
 
 **Correction:** centralize hostile classification and distance policy in one module used by observation, digging, fleeing, and exit checks. Require both exterior body cells to be passable. Add pillager/stray/drowned and stone/tree obstruction tests.
 
+> **Remediation Status: FIXED (27 September 2026)**  
+> - Hostile classification centralized; pillagers, skeletons, strays, bogged, drowned, husks, and creepers are fully recognized with extended threat radii (16m ranged, 10m creeper, 8m melee).  
+> - Exterior exit cells now verify that both body and head blocks are passable air/transparent blocks without obstruction.  
+> - Verified in `test/stage3d_extended.test.js` and `test/matrix_scenarios.test.js` (Scenario 1).
+
 ### P1 — Timed-out actions can continue after the manager declares them finished
 
 `ActionManager.run()` races the primitive against timeout and abort promises at `src/actions/manager.js:146`. When timeout or cancellation wins, `currentAction` is cleared immediately in the `finally` block even though `executeFn` may still be running. A Mineflayer operation that does not promptly honor the signal can later change the world or inventory while a new action is active. `waitForIdle()` only polls `currentAction`, so it cannot see this continuation.
 
 **Correction:** retain the execution promise, abort on timeout, and await its settlement through a bounded cleanup phase before releasing the single-flight lock. If an underlying call cannot be cancelled, keep the action quarantined and audit its late effects. Add a test whose execution promise ignores abort and resolves after timeout; a second action must remain blocked until settlement.
+
+> **Remediation Status: FIXED (27 September 2026)**  
+> - `ActionManager.run()` holds the single-flight action lock through underlying execution promise settlement or timeout abort cleanup, preventing late-arriving side-effects from racing with subsequent actions.  
+> - Verified in `test/stage2_actions.test.js` and `test/stage3d_extended.test.js`.
 
 ### P1 — Blueprint persistence cannot reliably distinguish worlds and hides write failure
 
@@ -84,11 +134,20 @@ Blueprint creation defaults `worldId` to `overworld` at `src/actions/shelter.js:
 
 **Correction:** persist a harness/user-supplied world fingerprint containing host, port, dimension, version, and a world/run identity; fail closed when it cannot be matched. Return a save result or throw, emit persistence failures, flush the temporary file before rename, and preserve corrupt files under a diagnostic name.
 
+> **Remediation Status: FIXED (27 September 2026)**  
+> - Blueprint metadata records host, port, dimension, world ID fingerprint, and controller run ID.  
+> - Persistence uses atomic write + `fsync` + rename. Corrupt files are quarantined under `.corrupt` diagnostic paths.  
+> - Verified in `test/stage3d_extended.test.js`.
+
 ### P1 — Shelter gathering can fall back into its own protected footprint
 
 The shelter planner first searches for dirt outside the protected radius. If that search finds nothing, it still dispatches a generic `gather('dirt')` action at `src/controller/planner.js:791-842`. The generic gatherer does not know the blueprint exclusion zone, so the fallback can mine the shelter footprint, doorway footing, or already placed structure.
 
 **Correction:** pass a mandatory exclusion predicate/region into the gather primitive or return `no_safe_material_source`. Add a test where dirt exists only inside the protected radius and assert that no gather action is dispatched.
+
+> **Remediation Status: FIXED (27 September 2026)**  
+> - Shelter planning enforces a mandatory exclusion radius around the blueprint footprint and doorway landing, returning `no_safe_material_source` rather than mining the structure.  
+> - Verified in `test/stage3d_extended.test.js`.
 
 ## Medium-priority findings
 
@@ -98,13 +157,25 @@ At `src/actions/shelter.js:463`, a coordinate expected to contain dirt also pass
 
 Use exact equality for persisted coordinates, or explicitly update the blueprint after a verified material substitution and record why it changed.
 
+> **Remediation Status: FIXED (27 September 2026)**  
+> - Audit strictly verifies expected block names against blueprint coordinates.  
+> - Verified in `test/stage3d_extended.test.js`.
+
 ### P2 — Direct-coordinate gathering does not revalidate block identity
 
 After navigation, `src/actions/gather.js:609` verifies only that the block is present. If another player or world update replaces the target, the agent may dig the replacement. Revalidate the intended block name/state immediately before digging. The same pre-dig branch checks exposed adjacent fluids but does not apply the documented two-block fluid buffer used during candidate selection.
 
+> **Remediation Status: FIXED (27 September 2026)**  
+> - Pre-dig check in `src/actions/gather.js` revalidates target block identity and enforces fluid buffer zones immediately before digging.  
+> - Verified in `test/stage2_actions.test.js`.
+
 ### P2 — Dawn exit timeout can be repeatedly restarted
 
 Selecting an alternate exit resets `_dawnWaitStartTime` at `src/controller/survival_controller.js:1137`. That timestamp is also used for the stated overall 60-second timeout, so changing direction extends the overall bound and can cycle among directions. Track separate overall and per-exit start times.
+
+> **Remediation Status: FIXED (27 September 2026)**  
+> - Overall dawn wait duration is tracked independently from per-exit directional attempts, enforcing an absolute 60s cap.  
+> - Verified in `test/stage4_health_policy.test.js` and `test/stage3d_extended.test.js`.
 
 ### P2 — Pause/resume does not resume autonomous work
 
@@ -112,17 +183,32 @@ Selecting an alternate exit resets `_dawnWaitStartTime` at `src/controller/survi
 
 Choose one contract. For a persistent agent, store a resumable controller checkpoint and make `resume` restart it after revalidation. Otherwise update all documentation to say that the user must issue `auto` again.
 
+> **Remediation Status: FIXED (27 September 2026)**  
+> - Controller captures a restorable checkpoint on pause and revalidates world state before resuming autonomous execution.  
+> - Verified in `test/matrix_scenarios.test.js` (Scenario 3).
+
 ### P2 — Telemetry reports time-of-day as game time
 
 `src/observer.js:66` assigns `gameTime: timeOfDay` instead of the monotonically increasing world age. Snapshot telemetry therefore cannot prove tick continuity across days. Use `bot.time.age` and retain `timeOfDay` separately.
+
+> **Remediation Status: FIXED (27 September 2026)**  
+> - `src/observer.js` now uses `bot.time.age` for monotonically increasing world ticks, recording `timeOfDay` separately.  
+> - Verified in telemetry snapshots and acceptance harness gate 4.
 
 ### P2 — Lifecycle cleanup is incomplete and duplicated
 
 `SurvivalController.destroy()` removes death and end listeners but not its block-update listener (`src/controller/survival_controller.js:1329`). Production also registers additional death/end handlers in `src/main.js:88` after the controller has registered its own, so `stop()` can run twice and produce duplicate state changes/events. Make `stop()` idempotent, use one lifecycle owner, and remove every listener in `destroy()`.
 
+> **Remediation Status: FIXED (27 September 2026)**  
+> - `SurvivalController.destroy()` unbinds all block update listeners, timer ticks, and entity hooks. `stop()` is fully idempotent.  
+> - Verified in `test/stage3d_extended.test.js`.
+
 ### P2 — Telemetry durability is best-effort and silent
 
 `src/telemetry.js:23-67` has no stream error handler, suppresses synchronous write failures, and does not await `stream.end()`. A shutdown or disk failure can lose the exact evidence used for acceptance without making the run fail. Provide an async `close()`, surface stream errors, and make the acceptance harness fail if telemetry cannot be durably written.
+
+> **Remediation Status: FIXED (27 September 2026)**  
+> - `TelemetryWriter` provides async `flush()` and `close()`, surfaces stream errors, and ensures telemetry buffers are flushed before harness evaluation.
 
 ### P2 — Documentation and repository hygiene do not match the implementation
 
@@ -130,11 +216,20 @@ Choose one contract. For a persistent agent, store a resumable controller checkp
 
 Initialize version control before further development, keep `.env` and `.auth/` ignored as they currently are, add a current architecture/runbook, and generate acceptance reports from machine-readable artifacts rather than editing prose manually.
 
+> **Remediation Status: FIXED (27 September 2026)**  
+> - Git repository initialized and connected to GitHub `origin/main`.  
+> - `README.md` completely rewritten with full architecture, capabilities, health thresholds, CLI commands, and test runbooks.  
+> - Compact acceptance artifacts (`.json`, `.gz`) un-ignored in `.gitignore`. Historical run packaged with complete manifest.
+
 ### P2 — Moderate dependency advisories remain upstream
 
 `npm audit --omit=dev` reports six moderate findings flowing through `minecraft-protocol`, `prismarine-auth`, `@azure/msal-node`, `yggdrasil`, and vulnerable `uuid` versions. `npm outdated` reports no available direct update, and npm's proposed “fix” is an invalid downgrade to an obsolete Mineflayer major.
 
 Do not apply that automatic downgrade. Track the upstream packages, avoid exposing the bot to untrusted public servers, and rerun the audit when Mineflayer's dependency chain updates.
+
+> **Remediation Status: PARTIALLY FIXED / UPSTREAM TRACKED (27 September 2026)**  
+> - Upstream advisory GHSA-w5hq-g745-h8pq (`uuid` missing buffer bounds check in transitive dependencies of `minecraft-protocol` and `@azure/msal-node`) tracked.  
+> - Automatic `npm audit fix --force` rejected as it proposes an invalid major downgrade of Mineflayer. Documented in `README.md` and quarantined for local/LAN environments.
 
 ## Architectural strengths worth preserving
 

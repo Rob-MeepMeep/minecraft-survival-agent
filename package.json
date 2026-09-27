@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node --env-file=.env src/main.js",
     "check": "node --check src/config.js && node --check src/telemetry.js && node --check src/observer.js && node --check src/connection.js && node --check src/actions/manager.js && node --check src/actions/navigate.js && node --check src/actions/gather.js && node --check src/actions/craft.js && node --check src/actions/equip.js && node --check src/actions/eat.js && node --check src/actions/place.js && node --check src/actions/attack.js && node --check src/actions/shelter.js && node --check src/controller/failure_tracker.js && node --check src/controller/planner.js && node --check src/controller/survival_controller.js && node --check src/main.js",
-    "test": "node --test test/config.test.js test/gather.test.js test/navigation.test.js test/craft.test.js test/eat.test.js test/place.test.js test/controller.test.js test/stone_progression.test.js test/attack.test.js test/food_acquisition.test.js test/shelter.test.js test/stage4.test.js test/release_hardening.test.js reference/policy.test.js",
+    "test": "node --test test/config.test.js test/gather.test.js test/navigation.test.js test/craft.test.js test/eat.test.js test/place.test.js test/controller.test.js test/stone_progression.test.js test/attack.test.js test/food_acquisition.test.js test/shelter.test.js test/stage4.test.js test/stage4_health_policy.test.js test/matrix_scenarios.test.js test/release_hardening.test.js reference/policy.test.js",
     "test:craft": "node --env-file=.env scripts/live-craft-test.js",
     "test:eat": "node --env-file=.env scripts/live-eat-test.js",
     "test:place": "node --env-file=.env scripts/live-place-test.js",

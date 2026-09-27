@@ -31,6 +31,19 @@ const {
 } = require('../actions/gather');
 
 /**
+ * Sensible Health and Nutrition Thresholds for Autonomous Survival
+ */
+const HEALTH_THRESHOLDS = {
+  OPTIMAL: 20,                // 10 full hearts (full health)
+  REGEN_FOOD_THRESHOLD: 18,   // Vanilla Minecraft 1.21 mechanic: natural passive health regen requires food >= 18
+  SAFE_MINIMUM: 14,           // 7 hearts: warning threshold, pause progression, prioritize recovery/shelter
+  DANGER: 10,                 // 5 hearts: danger threshold, strict evasion, disengage from combat
+  MIN_ACCEPTANCE_HEALTH: 8,   // 4 hearts: minimum health allowed at any point during acceptance run
+  MIN_FINAL_HEALTH: 12,       // 6 hearts: minimum final health required at end of acceptance run
+  TERMINAL_CRITICAL: 6,       // 3 hearts: critical threshold, enter critical_health_no_recovery if unrecoverable
+};
+
+/**
  * Checks whether a given position corresponds to one of the 34 solid enclosure coordinates.
  * Excludes the 2 interior vertical air cells.
  *
@@ -318,6 +331,15 @@ class SurvivalController {
     };
     this._recordedMilestones = new Set();
 
+    /** Damage and Threat Emergency Tracking */
+    this.damageTimeline = [];
+    this._activeAggressors = new Map();
+    this._lastDamageTime = 0;
+    this._lastHealth = undefined;
+    if (this.bot && !this.bot._activeAggressors) {
+      this.bot._activeAggressors = new Set();
+    }
+
     // Attach lifecycle listeners to cleanly stop controller on death or disconnect
     this._onDeath = () => {
       const bp = loadBlueprint();
@@ -330,6 +352,14 @@ class SurvivalController {
     };
     this._onEnd = () => {
       if (this.active) this.stop('disconnected');
+    };
+
+    // Attach entityHurt listener for damage recording
+    this._onEntityHurt = (entity) => {
+      if (!this.active || !this.bot) return;
+      if (entity === this.bot.entity) {
+        this._checkAndRecordDamage('entity_hurt_event');
+      }
     };
 
     // Attach blockUpdate listener for instantaneous shelter breach detection
@@ -361,7 +391,165 @@ class SurvivalController {
       this.bot.on('death', this._onDeath);
       this.bot.on('end', this._onEnd);
       this.bot.on('blockUpdate', this._onBlockUpdate);
+      this.bot.on('entityHurt', this._onEntityHurt);
     }
+  }
+
+  /**
+   * Categorizes bot health into human-readable policy states.
+   *
+   * @param {number} [hp]
+   * @returns {string}
+   */
+  _getHealthThresholdState(hp) {
+    const health = hp ?? 20;
+    if (health >= HEALTH_THRESHOLDS.OPTIMAL) return 'optimal';
+    if (health > HEALTH_THRESHOLDS.SAFE_MINIMUM) return 'good';
+    if (health > HEALTH_THRESHOLDS.DANGER) return 'warning';
+    if (health > HEALTH_THRESHOLDS.TERMINAL_CRITICAL) return 'danger';
+    return 'terminal_critical';
+  }
+
+  /**
+   * Synchronizes active aggressors and purges expired entries.
+   */
+  _syncActiveAggressors() {
+    const now = Date.now();
+    for (const [key, expires] of this._activeAggressors.entries()) {
+      if (now > expires) {
+        this._activeAggressors.delete(key);
+      }
+    }
+    if (this.bot) {
+      if (!this.bot._activeAggressors) this.bot._activeAggressors = new Set();
+      this.bot._activeAggressors.clear();
+      for (const key of this._activeAggressors.keys()) {
+        this.bot._activeAggressors.add(key);
+      }
+    }
+  }
+
+  /**
+   * Finds nearby hostile threats, including active aggressors and ranged mobs.
+   *
+   * @param {number} [maxDist=18.0]
+   * @returns {Array<object>}
+   */
+  _getNearbyThreats(maxDist = 18.0) {
+    if (!this.bot?.entity?.position) return [];
+    this._syncActiveAggressors();
+    const botPos = this.bot.entity.position;
+    const isDaylight = this.bot.time ? (this.bot.time.timeOfDay < 12000 || this.bot.time.timeOfDay >= 23000) : false;
+    const threats = Object.values(this.bot.entities || {}).filter(e => {
+      if (!e || !e.position || e === this.bot.entity) return false;
+      const type = e.name || e.type;
+      const isRanged = RANGED_HOSTILES.has(type);
+      const isMelee = MELEE_HOSTILES.has(type);
+      if (!isRanged && !isMelee) return false;
+      const d = botPos.distanceTo(e.position);
+      const isAggressor = Boolean(
+        this.bot._activeAggressors && (this.bot._activeAggressors.has(e.id) || this.bot._activeAggressors.has(type))
+      );
+      // Spiders are neutral in daylight unless provoked or within 3m
+      if ((type === 'spider' || type === 'cave_spider') && isDaylight && !isAggressor) {
+        return d <= 3.0;
+      }
+      if (isMelee && Math.abs(botPos.y - e.position.y) > 4.5) {
+        return false;
+      }
+      return d <= (isRanged ? Math.max(16.0, maxDist) : Math.min(10.0, maxDist));
+    });
+    return threats.sort((a, b) => botPos.distanceTo(a.position) - botPos.distanceTo(b.position));
+  }
+
+  /**
+   * Health-Aware Damage Detection & Telemetry Recording.
+   * Records attacker, damage amount, position, time, current goal, and nearby threats.
+   *
+   * @param {string} [reason='tick_check']
+   * @param {object} [forcedAttacker=null]
+   * @returns {object|null}
+   */
+  _checkAndRecordDamage(reason = 'tick_check', forcedAttacker = null) {
+    if (!this.bot) return null;
+    const currentHealth = this.bot.health ?? 20;
+    if (this._lastHealth === undefined) {
+      this._lastHealth = currentHealth;
+      return null;
+    }
+
+    if (currentHealth < this._lastHealth) {
+      const damageAmount = this._lastHealth - currentHealth;
+      const prevHealth = this._lastHealth;
+      this._lastHealth = currentHealth;
+      this._lastDamageTime = Date.now();
+      // Immediately clear flee cooldown on damage so the agent can react
+      this._fleeCooldownUntil = 0;
+
+      let attacker = forcedAttacker;
+      const threats = this._getNearbyThreats(18.0);
+      if (!attacker && threats.length > 0) {
+        attacker = threats[0];
+      }
+
+      if (attacker) {
+        const attackerId = attacker.id || attacker.name || 'unknown';
+        this._activeAggressors.set(attackerId, Date.now() + 60000);
+        if (attacker.name) this._activeAggressors.set(attacker.name, Date.now() + 60000);
+        this._syncActiveAggressors();
+      }
+
+      const botPos = this.bot.entity?.position;
+      const damageRecord = {
+        timestamp: new Date().toISOString(),
+        timeOfDay: this.bot.time?.timeOfDay ?? null,
+        worldAge: this.bot.time?.age ?? null,
+        controllerRunId: this.currentRunId,
+        generation: this.generation,
+        currentGoal: this.currentGoal,
+        damageAmount: Math.round(damageAmount * 100) / 100,
+        previousHealth: Math.round(prevHealth * 100) / 100,
+        currentHealth: Math.round(currentHealth * 100) / 100,
+        position: botPos ? {
+          x: Math.round(botPos.x * 100) / 100,
+          y: Math.round(botPos.y * 100) / 100,
+          z: Math.round(botPos.z * 100) / 100,
+        } : null,
+        attacker: attacker ? {
+          id: attacker.id,
+          name: attacker.name || attacker.type || 'unknown',
+          position: attacker.position ? {
+            x: Math.round(attacker.position.x * 100) / 100,
+            y: Math.round(attacker.position.y * 100) / 100,
+            z: Math.round(attacker.position.z * 100) / 100,
+          } : null,
+          distance: attacker.position && botPos
+            ? Math.round(botPos.distanceTo(attacker.position) * 100) / 100
+            : null,
+        } : null,
+        nearbyThreats: threats.map(t => ({
+          id: t.id,
+          name: t.name || t.type,
+          distance: t.position && botPos ? Math.round(botPos.distanceTo(t.position) * 100) / 100 : null,
+        })),
+        reason,
+        healthState: this._getHealthThresholdState(currentHealth),
+      };
+
+      this.damageTimeline.push(damageRecord);
+
+      this.telemetry?.emit({
+        event: 'damage_taken',
+        controllerRunId: this.currentRunId,
+        generation: this.generation,
+        ...damageRecord,
+      });
+
+      return damageRecord;
+    }
+
+    this._lastHealth = currentHealth;
+    return null;
   }
 
   /**
@@ -632,6 +820,10 @@ class SurvivalController {
   async _tick(runId) {
     if (!this.active || this.currentRunId !== runId) return;
 
+    this._syncActiveAggressors();
+    const damageRecord = this._checkAndRecordDamage('tick');
+    const tookDamage = Boolean(damageRecord || (this._lastDamageTime && Date.now() - this._lastDamageTime < 2500));
+
     // 1. Single-Flight Concurrency Guarantee: Yield if action is in progress, but preempt on urgent danger
     if (this.actionManager && this.actionManager.isBusy) {
       const isShelterGoal = this.currentGoal === 'build_shelter' ||
@@ -639,23 +831,8 @@ class SurvivalController {
         this.currentGoal === 'leave_shelter';
 
       // Check for urgent threat or damage during in-flight actions
-      if (!isShelterGoal && !this.shelterSafetyClaim && this.bot.entities && this.bot.entity?.position) {
-        const isDaylight = this.bot.time ? (this.bot.time.timeOfDay < 12000 || this.bot.time.timeOfDay >= 23000) : false;
-        const threats = Object.values(this.bot.entities).filter(e => {
-          if (!e || !e.position || e === this.bot.entity) return false;
-          const type = e.name || e.type;
-          const isRanged = RANGED_HOSTILES.has(type);
-          const isMelee = MELEE_HOSTILES.has(type);
-          if (!isRanged && !isMelee) return false;
-          const d = this.bot.entity.position.distanceTo(e.position);
-          if ((type === 'spider' || type === 'cave_spider') && isDaylight) {
-            return d <= 3.0;
-          }
-          return d <= (isRanged ? 14.0 : 7.0);
-        });
-
-        const currentHealth = this.bot.health ?? 20;
-        const tookDamage = this._lastHealth !== undefined && currentHealth < this._lastHealth;
+      if (!isShelterGoal && !this.shelterSafetyClaim && this.bot?.entities && this.bot?.entity?.position) {
+        const threats = this._getNearbyThreats(14.0);
 
         if (threats.length > 0 || tookDamage) {
           const actionName = this.actionManager.currentAction?.actionName;
@@ -675,7 +852,7 @@ class SurvivalController {
               args: [],
               trigger: tookDamage ? 'damage_evasion' : 'threat_evasion',
               completionPredicate: threats.length > 0
-                ? { type: 'threat_cleared', meleeDistance: 10.0, rangedDistance: 16.0 }
+                ? { type: 'threat_cleared', meleeDistance: 12.0, rangedDistance: 18.0 }
                 : { type: 'damage_cleared' },
               controllerRunId: runId,
             };
@@ -688,12 +865,10 @@ class SurvivalController {
           }
         }
       }
-      this._lastHealth = this.bot.health;
 
       this._scheduleTick(100, runId);
       return;
     }
-    this._lastHealth = this.bot.health;
 
     const snap = snapshot(this.bot);
 
@@ -749,14 +924,14 @@ class SurvivalController {
     // 0A. Daytime Hostile Threat Evasion Active Goal Handler
     if (this.currentGoal === 'flee_threat') {
       const currentHealth = this.bot.health ?? 20;
-      const isDamaged = this._lastHealth !== undefined && currentHealth < this._lastHealth;
-      const hasHostiles = hasHostileThreatNearby(this.bot, 10.0, null, 16.0);
+      const threats = this._getNearbyThreats(18.0);
+      const recentDamage = this._lastDamageTime && (Date.now() - this._lastDamageTime < 5000);
       const fleeAttempts = this._fleeAttemptCount || 0;
-      const isCleared = !hasHostiles && !isDamaged && fleeAttempts >= 1;
+      const isCleared = threats.length === 0 && !recentDamage && fleeAttempts >= 1;
 
       if (isCleared || fleeAttempts >= 10) {
         if (this._failedFleeTargets) this._failedFleeTargets.clear();
-        this._fleeCooldownUntil = Date.now() + 5000;
+        this._fleeCooldownUntil = Date.now() + 2000;
         if (this.goalStack.length > 0) {
           const restored = this.goalStack.pop();
           this.currentGoal = restored.goal;
@@ -779,21 +954,6 @@ class SurvivalController {
           return;
         }
       }
-
-      // Threats still nearby: perform pathfinding-validated evasion step
-      const isDaylight = this.bot.time ? (this.bot.time.timeOfDay < 12000 || this.bot.time.timeOfDay >= 23000) : false;
-      const threats = Object.values(this.bot.entities || {}).filter(e => {
-        if (!e || !e.position || e === this.bot.entity) return false;
-        const type = e.name || e.type;
-        const isRanged = RANGED_HOSTILES.has(type);
-        const isMelee = MELEE_HOSTILES.has(type);
-        if (!isRanged && !isMelee) return false;
-        const d = this.bot.entity.position.distanceTo(e.position);
-        if ((type === 'spider' || type === 'cave_spider') && isDaylight) {
-          return d <= 3.0;
-        }
-        return d <= (isRanged ? 16.0 : 10.0);
-      });
 
       this._fleeAttemptCount = fleeAttempts + 1;
       const safeTarget = findSafeFleeDestination(this.bot, threats, 12, 18, this._failedFleeTargets);
@@ -831,17 +991,40 @@ class SurvivalController {
         this._scheduleTick(100, runId);
         return;
       } else {
-        // Defensive knockback if a hostile mob is within striking reach
-        const nearestThreat = [...threats].sort((a, b) => this.bot.entity.position.distanceTo(a.position) - this.bot.entity.position.distanceTo(b.position))[0];
-        const dist = nearestThreat ? this.bot.entity.position.distanceTo(nearestThreat.position) : Infinity;
-        if (nearestThreat && dist <= 3.5 && nearestThreat.name !== 'creeper' && typeof this.bot.attack === 'function') {
-          try {
-            if (typeof this.bot.lookAt === 'function') {
-              const eyeY = nearestThreat.height ? nearestThreat.height * 0.8 : 1.4;
-              await this.bot.lookAt(nearestThreat.position.offset(0, eyeY, 0));
-            }
-            this.bot.attack(nearestThreat);
-          } catch {}
+        // Safe destination could not be found
+        // If at terminal critical health with no recovery options, enter explicit bounded critical_health_no_recovery
+        if (currentHealth <= HEALTH_THRESHOLDS.TERMINAL_CRITICAL) {
+          const expendable = getExpendableBuildingBlocks(items);
+          const safeFood = items.find(i => SAFE_FOODS.has(i.name) && i.count > 0);
+          if (!safeFood && (this.bot.food ?? 20) < HEALTH_THRESHOLDS.REGEN_FOOD_THRESHOLD && expendable < 25) {
+            this.status = 'critical_health_no_recovery';
+            this.active = false;
+            this.telemetry?.emit({
+              event: 'controller_critical_health_no_recovery',
+              controllerRunId: runId,
+              generation: this.generation,
+              health: currentHealth,
+              reason: 'flee_exhausted_at_terminal_health',
+            });
+            await this.stop('critical_health_no_recovery');
+            return;
+          }
+        }
+
+        // Avoid re-engaging threats after taking damage or when health is unsafe!
+        const canDefend = currentHealth > HEALTH_THRESHOLDS.SAFE_MINIMUM && !recentDamage;
+        if (canDefend) {
+          const nearestThreat = threats[0];
+          const dist = nearestThreat ? this.bot.entity.position.distanceTo(nearestThreat.position) : Infinity;
+          if (nearestThreat && dist <= 3.5 && nearestThreat.name !== 'creeper' && typeof this.bot.attack === 'function') {
+            try {
+              if (typeof this.bot.lookAt === 'function') {
+                const eyeY = nearestThreat.height ? nearestThreat.height * 0.8 : 1.4;
+                await this.bot.lookAt(nearestThreat.position.offset(0, eyeY, 0));
+              }
+              this.bot.attack(nearestThreat);
+            } catch {}
+          }
         }
 
         this.telemetry?.emit({
@@ -850,6 +1033,7 @@ class SurvivalController {
           generation: this.generation,
           warning: 'no_safe_flee_destination',
           threatCount: threats.length,
+          reEngagePrevented: !canDefend,
         });
         if (!this.active || this.currentRunId !== runId) return;
         this._scheduleTick(500, runId);
@@ -857,31 +1041,38 @@ class SurvivalController {
       }
     }
 
+    // 0AA. Terminal Critical Health Check: Bounded transition to critical_health_no_recovery if unrecoverable
+    if (snap.health !== null && snap.health <= HEALTH_THRESHOLDS.TERMINAL_CRITICAL) {
+      const currentExpendable = getExpendableBuildingBlocks(items);
+      const safeFood = items.find(i => SAFE_FOODS.has(i.name) && i.count > 0);
+      const bp = loadBlueprint();
+      const isEnclosed = bp && (bp.buildState === 'enclosed' || bp.buildState === 'waiting');
+      const threats = this._getNearbyThreats(16.0);
+      const safeFleeDest = findSafeFleeDestination(this.bot, threats, 12, 18, this._failedFleeTargets);
+
+      if (!isEnclosed && !safeFood && (snap.food ?? 20) < HEALTH_THRESHOLDS.REGEN_FOOD_THRESHOLD && currentExpendable < 25 && (threats.length > 0 && !safeFleeDest)) {
+        this.status = 'critical_health_no_recovery';
+        this.active = false;
+        this.telemetry?.emit({
+          event: 'controller_critical_health_no_recovery',
+          controllerRunId: runId,
+          generation: this.generation,
+          health: snap.health,
+          food: snap.food,
+          reason: 'critical_health_no_recovery_possible',
+        });
+        await this.stop('critical_health_no_recovery');
+        return;
+      }
+    }
+
     // 0B. Threat or Damage Detection: suspend current goal onto stack and flee
     if (!isShelterGoal && this.currentGoal !== 'flee_threat' && !this.shelterSafetyClaim && this.bot.entity?.position) {
-      const isDaylight = this.bot.time ? (this.bot.time.timeOfDay < 12000 || this.bot.time.timeOfDay >= 23000) : false;
-      const threats = Object.values(this.bot.entities || {}).filter(e => {
-        if (!e || !e.position || e === this.bot.entity) return false;
-        const type = e.name || e.type;
-        const isRanged = RANGED_HOSTILES.has(type);
-        const isMelee = MELEE_HOSTILES.has(type);
-        if (!isRanged && !isMelee) return false;
-        const d = this.bot.entity.position.distanceTo(e.position);
-        if ((type === 'spider' || type === 'cave_spider') && isDaylight) {
-          return d <= 3.0;
-        }
-        if (isMelee && Math.abs(this.bot.entity.position.y - e.position.y) > 4.5) {
-          return false;
-        }
-        return d <= (isRanged ? 16.0 : 10.0);
-      });
-
-      const currentHealth = this.bot.health ?? 20;
-      const tookDamage = this._lastHealth !== undefined && currentHealth < this._lastHealth;
-      const canFlee = !this._fleeCooldownUntil || Date.now() >= this._fleeCooldownUntil;
+      const threats = this._getNearbyThreats(16.0);
+      const canFlee = !this._fleeCooldownUntil || Date.now() >= this._fleeCooldownUntil || tookDamage;
 
       if ((threats.length > 0 && canFlee) || tookDamage) {
-        const nearest = threats.sort((a, b) => this.bot.entity.position.distanceTo(a.position) - this.bot.entity.position.distanceTo(b.position))[0];
+        const nearest = threats[0];
         const nearestDist = nearest ? this.bot.entity.position.distanceTo(nearest.position) : null;
 
         const frame = {
@@ -889,7 +1080,7 @@ class SurvivalController {
           args: [],
           trigger: tookDamage ? 'damage_evasion' : 'threat_evasion',
           completionPredicate: threats.length > 0
-            ? { type: 'threat_cleared', meleeDistance: 10.0, rangedDistance: 16.0 }
+            ? { type: 'threat_cleared', meleeDistance: 12.0, rangedDistance: 18.0 }
             : { type: 'damage_cleared' },
           controllerRunId: runId,
         };
@@ -914,25 +1105,49 @@ class SurvivalController {
       }
     }
 
-    // 1. Arbitration: Emergency Eating (Applies across all modes if food <= eatThreshold and safe food is available)
-    if (snap.food !== null && snap.food <= (this.options.eatThreshold || 14)) {
-      const safeFood = items.find(i => SAFE_FOODS.has(i.name) && i.count > 0);
-      if (safeFood && this.primitives?.eater) {
+    // 1. Arbitration: Emergency & Natural Regeneration Eating
+    // Note: Eating does NOT directly restore health; it restores food/saturation to enable vanilla Minecraft natural regeneration.
+    const needsEmergencyFood = snap.food !== null && snap.food <= (this.options.eatThreshold || 14);
+    const needsRegenFood = snap.food !== null && snap.food < HEALTH_THRESHOLDS.REGEN_FOOD_THRESHOLD && (snap.health ?? 20) < HEALTH_THRESHOLDS.OPTIMAL;
+    if (needsEmergencyFood || needsRegenFood) {
+      const nearbyImmediateThreat = snap.nearbyThreats?.some(t => t.distance <= 3.0);
+      if (!nearbyImmediateThreat) {
+        const safeFood = items.find(i => SAFE_FOODS.has(i.name) && i.count > 0);
+        if (safeFood && this.primitives?.eater) {
+          this.telemetry?.emit({
+            event: 'controller_intent',
+            controllerRunId: runId,
+            generation: this.generation,
+            action: 'eat',
+            args: [safeFood.name],
+            reason: needsRegenFood ? 'natural_regeneration_food_threshold' : (this.status === 'failed_unsafe' ? 'emergency_eat_in_failed_unsafe' : 'emergency_eat_low_hunger'),
+            details: { food: snap.food, health: snap.health, item: safeFood.name },
+          });
+          try {
+            await this.primitives.eater.eat(safeFood.name);
+          } catch {
+            // ignore eat error in emergency loop
+          }
+          if (!this.active || this.currentRunId !== runId) return;
+        }
+      }
+    }
+
+    // 1B. Health Safety Preemption: If health is unsafe (<= 14), prioritize shelter immediately if materials exist
+    if (!isShelterGoal && snap.health !== null && snap.health <= HEALTH_THRESHOLDS.SAFE_MINIMUM) {
+      const currentExpendable = getExpendableBuildingBlocks(items);
+      if (currentExpendable >= 25) {
         this.telemetry?.emit({
-          event: 'controller_intent',
+          event: 'controller_preemption',
           controllerRunId: runId,
           generation: this.generation,
-          action: 'eat',
-          args: [safeFood.name],
-          reason: this.status === 'failed_unsafe' ? 'emergency_eat_in_failed_unsafe' : 'emergency_eat_low_hunger',
-          details: { food: snap.food, item: safeFood.name },
+          reason: 'emergency_shelter_due_to_low_health',
+          health: snap.health,
+          expendableBlocks: currentExpendable,
         });
-        try {
-          await this.primitives.eater.eat(safeFood.name);
-        } catch {
-          // ignore eat error in emergency loop
-        }
-        if (!this.active || this.currentRunId !== runId) return;
+        this.currentGoal = 'build_shelter';
+        this._scheduleTick(0, runId);
+        return;
       }
     }
 
@@ -1634,8 +1849,9 @@ class SurvivalController {
       this.bot.removeListener('death', this._onDeath);
       this.bot.removeListener('end', this._onEnd);
       this.bot.removeListener('blockUpdate', this._onBlockUpdate);
+      this.bot.removeListener('entityHurt', this._onEntityHurt);
     }
   }
 }
 
-module.exports = { SurvivalController, findSafeFleeDestination };
+module.exports = { SurvivalController, findSafeFleeDestination, HEALTH_THRESHOLDS };

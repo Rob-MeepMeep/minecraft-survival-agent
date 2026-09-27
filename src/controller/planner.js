@@ -998,17 +998,19 @@ class GoalPlanner {
         };
       }
 
-      // Check hunger while sheltered
+      // Check hunger while sheltered: eat when hunger is low (<= 14) or to reach regeneration threshold (food >= 18) when health < 20
       const currentFood = simulatedState ? (simulatedState.food ?? 20) : (bot.food ?? 20);
-      if (currentFood <= 14) {
+      const currentHealth = simulatedState ? (simulatedState.health ?? 20) : (bot?.health ?? 20);
+      const needsRegenFood = currentHealth < 20 && currentFood < 18;
+      if (currentFood <= 14 || needsRegenFood) {
         const safeFood = items.find(i => SAFE_FOODS.has(i.name) && i.count > 0);
         if (safeFood) {
           return {
             status: 'action_required',
             action: 'eat',
             args: [safeFood.name],
-            reason: 'eat_while_sheltered',
-            details: { food: currentFood, item: safeFood.name },
+            reason: needsRegenFood ? 'eat_for_natural_regeneration' : 'eat_while_sheltered',
+            details: { food: currentFood, health: currentHealth, item: safeFood.name },
             targetKey: FailureTracker.makeKey('eat', safeFood.name),
           };
         }
