@@ -637,6 +637,7 @@ class SurvivalController {
 
       // Check for urgent threat or damage during in-flight actions
       if (!isShelterGoal && !this.shelterSafetyClaim && this.bot.entities && this.bot.entity?.position) {
+        const isDaylight = this.bot.time ? (this.bot.time.timeOfDay < 12000 || this.bot.time.timeOfDay >= 23000) : false;
         const threats = Object.values(this.bot.entities).filter(e => {
           if (!e || !e.position || e === this.bot.entity) return false;
           const type = e.name || e.type;
@@ -644,6 +645,9 @@ class SurvivalController {
           const isMelee = MELEE_HOSTILES.has(type);
           if (!isRanged && !isMelee) return false;
           const d = this.bot.entity.position.distanceTo(e.position);
+          if ((type === 'spider' || type === 'cave_spider') && isDaylight) {
+            return d <= 3.0;
+          }
           return d <= (isRanged ? 14.0 : 7.0);
         });
 
@@ -772,6 +776,7 @@ class SurvivalController {
       }
 
       // Threats still nearby: perform pathfinding-validated evasion step
+      const isDaylight = this.bot.time ? (this.bot.time.timeOfDay < 12000 || this.bot.time.timeOfDay >= 23000) : false;
       const threats = Object.values(this.bot.entities || {}).filter(e => {
         if (!e || !e.position || e === this.bot.entity) return false;
         const type = e.name || e.type;
@@ -779,6 +784,9 @@ class SurvivalController {
         const isMelee = MELEE_HOSTILES.has(type);
         if (!isRanged && !isMelee) return false;
         const d = this.bot.entity.position.distanceTo(e.position);
+        if ((type === 'spider' || type === 'cave_spider') && isDaylight) {
+          return d <= 3.0;
+        }
         return d <= (isRanged ? 16.0 : 10.0);
       });
 
@@ -840,6 +848,7 @@ class SurvivalController {
 
     // 0B. Threat or Damage Detection: suspend current goal onto stack and flee
     if (!isShelterGoal && this.currentGoal !== 'flee_threat' && !this.shelterSafetyClaim && this.bot.entity?.position) {
+      const isDaylight = this.bot.time ? (this.bot.time.timeOfDay < 12000 || this.bot.time.timeOfDay >= 23000) : false;
       const threats = Object.values(this.bot.entities || {}).filter(e => {
         if (!e || !e.position || e === this.bot.entity) return false;
         const type = e.name || e.type;
@@ -847,6 +856,9 @@ class SurvivalController {
         const isMelee = MELEE_HOSTILES.has(type);
         if (!isRanged && !isMelee) return false;
         const d = this.bot.entity.position.distanceTo(e.position);
+        if ((type === 'spider' || type === 'cave_spider') && isDaylight) {
+          return d <= 3.0;
+        }
         return d <= (isRanged ? 16.0 : 10.0);
       });
 

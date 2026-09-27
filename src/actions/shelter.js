@@ -649,6 +649,16 @@ function checkExitSafety(bot, blueprint, exitDirection = null) {
       const isMelee = MELEE_HOSTILES.has(type) || ALL_HOSTILES.has(type);
       const dist = entity.position.distanceTo(extPos);
 
+      // Spiders are neutral in daylight (timeOfDay < 12000 || timeOfDay >= 23000)
+      const isDaylight = bot.time ? (bot.time.timeOfDay < 12000 || bot.time.timeOfDay >= 23000) : false;
+      const isSpider = type === 'spider' || type === 'cave_spider';
+      if (isSpider && isDaylight) {
+        if (dist <= 2.0) {
+          return { safe: false, reason: `hostile_threat_${type}_at_exit` };
+        }
+        continue;
+      }
+
       // Ranged hostiles threat check within 16m of exit
       if (isRanged && dist <= 16.0) {
         return { safe: false, reason: `hostile_threat_${type}_at_exit` };

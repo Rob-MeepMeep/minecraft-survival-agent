@@ -166,6 +166,8 @@ function hasHostileThreatNearby(bot, minDistance = 8.0, pos = null, rangedDistan
   const meleeDist = minDistance !== null ? minDistance : 8.0;
   const rangedDist = rangedDistance !== null ? rangedDistance : 16.0;
 
+  const isDaylight = bot.time ? (bot.time.timeOfDay < 12000 || bot.time.timeOfDay >= 23000) : false;
+
   for (const ent of Object.values(bot.entities)) {
     if (!ent || !ent.position || ent === bot.entity) continue;
     const type = ent.name || ent.type;
@@ -173,8 +175,15 @@ function hasHostileThreatNearby(bot, minDistance = 8.0, pos = null, rangedDistan
     const isMelee = MELEE_HOSTILES.has(type);
     if (!isRanged && !isMelee) continue;
 
-    const threshold = isRanged ? rangedDist : meleeDist;
     const d = Math.hypot(ent.position.x - refPos.x, ent.position.y - refPos.y, ent.position.z - refPos.z);
+
+    // Spiders are neutral in daylight unless within immediate self-defense range (< 3m)
+    if ((type === 'spider' || type === 'cave_spider') && isDaylight) {
+      if (d <= 3.0) return true;
+      continue;
+    }
+
+    const threshold = isRanged ? rangedDist : meleeDist;
     if (d <= threshold) return true;
   }
   return false;
