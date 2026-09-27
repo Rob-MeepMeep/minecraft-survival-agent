@@ -876,17 +876,26 @@ function createGatherer(bot, actionManager) {
         ? trackedEntity.position
         : blockCenter;
 
-      // 6. Navigate to dropped item entity
-      try {
-        const pickupGoal = new goals.GoalNear(targetDropCoord.x, targetDropCoord.y, targetDropCoord.z, 0.8);
-        await bot.pathfinder.goto(pickupGoal);
-      } catch {
-        try {
-          if (goals.GoalNearXZ) {
-            await bot.pathfinder.goto(new goals.GoalNearXZ(targetDropCoord.x, targetDropCoord.z, 0.8));
+      // Check if drop was already vacuumed into inventory immediately post-dig
+      const earlyInv = getInventoryCounts(bot);
+      const earlyDeltas = computeInventoryDelta(invBeforeDig, earlyInv);
+      const { matchedAcquisitions: earlyMatched } = computeAttribution(earlyDeltas, expectedDrops);
+      const alreadyCollected = earlyMatched.length > 0;
+
+      // 6. Navigate to dropped item entity (only if not already collected and safe)
+      if (!alreadyCollected) {
+        const playerY = bot.entity?.position?.y;
+        const verticalDelta = playerY != null ? Math.abs(targetDropCoord.y - playerY) : 0;
+        // Never jump down cliffs/ledges or pathfind to drops far vertically
+        const isHazardousDrop = playerY != null && (targetDropCoord.y < playerY - 2.0 || verticalDelta > 3.0);
+
+        if (!isHazardousDrop) {
+          try {
+            const pickupGoal = new goals.GoalNear(targetDropCoord.x, targetDropCoord.y, targetDropCoord.z, 0.8);
+            await bot.pathfinder.goto(pickupGoal);
+          } catch {
+            // Drop might already be vacuumed or out of reach - never fallback to GoalNearXZ
           }
-        } catch {
-          // Drop might already be vacuumed or out of reach
         }
       }
 

@@ -724,16 +724,18 @@ test('regression 4: new entity disappears before navigation', async () => {
     dig: async (block) => {
       delete world[`${block.position.x},${block.position.y},${block.position.z}`];
       if (spawnListener) spawnListener(newDropEntity);
-      // Entity disappears before navigation (vacuumed instantly)
+      // Entity disappears from entities map before navigation
       newDropEntity.isValid = false;
       delete bot.entities[666];
-      invItems = [{ name: 'dirt', count: 1 }];
     },
     stopDigging: () => {},
     pathfinder: {
       setMovements: () => {},
       goto: async (goal) => {
         gotoCalls.push(goal);
+        if (gotoCalls.length === 2) {
+          invItems = [{ name: 'dirt', count: 1 }];
+        }
       },
     },
     inventory: {
@@ -762,6 +764,52 @@ test('regression 4: new entity disappears before navigation', async () => {
   assert.equal(pickupGoal.x, 0);
   assert.equal(pickupGoal.z, 1);
   assert.ok(Math.abs(pickupGoal.rangeSq - 0.64) < 1e-4);
+});
+
+test('regression: skips drop pickup navigation when drop is already collected in inventory', async () => {
+  let invItems = [];
+  const world = {
+    '0,64,1': { name: 'dirt', position: { x: 0, y: 64, z: 1 }, canHarvest: () => true },
+  };
+
+  let gotoCalls = [];
+  const bot = {
+    entity: { position: { x: 0, y: 64, z: 0 } },
+    entities: {},
+    blockAt: (pos) => world[`${pos.x},${pos.y},${pos.z}`] || { name: 'air' },
+    canDigBlock: () => true,
+    dig: async (block) => {
+      delete world[`${block.position.x},${block.position.y},${block.position.z}`];
+      // Item instantly vacuumed upon block break
+      invItems = [{ name: 'dirt', count: 1 }];
+    },
+    stopDigging: () => {},
+    pathfinder: {
+      setMovements: () => {},
+      goto: async (goal) => {
+        gotoCalls.push(goal);
+      },
+    },
+    inventory: {
+      items: () => invItems,
+      emptySlotCount: () => 20,
+    },
+    on: () => {},
+    removeListener: () => {},
+  };
+
+  const actionManager = new ActionManager({
+    bot,
+    getState: () => ({ active: true, ready: true, sessionId: 1 }),
+    telemetry: { emit: () => {} },
+  });
+
+  const gatherer = createGatherer(bot, actionManager);
+  const result = await gatherer.gather({ x: 0, y: 64, z: 1 });
+
+  assert.equal(result.outcome, 'success');
+  // Only 1 goto call (reach goal), pickup navigation skipped because item was already collected
+  assert.equal(gotoCalls.length, 1);
 });
 
 test('regression 5: inventory updates before entity tracking completes', async () => {
