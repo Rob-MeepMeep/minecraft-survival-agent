@@ -134,13 +134,27 @@ const manifest = {
 };
 fs.writeFileSync(path.join(runDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
 
-// Update result.json with forward slash evidencePath
-result.evidencePath = path.relative(process.cwd(), runDir).replace(/\\/g, '/');
-result.manifest = manifest;
-fs.writeFileSync(resultPath, JSON.stringify(result, null, 2), 'utf8');
-
-// Update root stage4_live_results.json
+// IMPORTANT: result.json is never rewritten after hashing — the SHA-256 recorded in
+// manifest.json must match the committed artifact file exactly. Any additional fields
+// (evidencePath, manifest) are only written to the root stage4_live_results.json copy.
+const rootResult = Object.assign({}, result, {
+  evidencePath: path.relative(process.cwd(), runDir).replace(/\\/g, '/'),
+  manifest,
+});
 const rootResultsPath = path.join(process.cwd(), 'stage4_live_results.json');
-fs.writeFileSync(rootResultsPath, JSON.stringify(result, null, 2), 'utf8');
+fs.writeFileSync(rootResultsPath, JSON.stringify(rootResult, null, 2), 'utf8');
 
+// Post-packaging integrity check: re-hash result.json and verify it still matches manifest
+const verifyContent = fs.readFileSync(resultPath);
+const verifyHash = crypto.createHash('sha256').update(verifyContent).digest('hex');
+const manifestHash = manifest.files['result.json']?.sha256;
+if (verifyHash !== manifestHash) {
+  console.error('INTEGRITY FAILURE: result.json sha256 mismatch after packaging!');
+  console.error('  Expected (manifest):', manifestHash);
+  console.error('  Actual   (file):    ', verifyHash);
+  console.error('  The file was modified after hashing. Manifest is invalid.');
+  process.exit(1);
+}
+
+console.log('Integrity check passed: result.json sha256 matches manifest.');
 console.log('Successfully packaged historical evidence for run:', result.runId);

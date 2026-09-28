@@ -1002,11 +1002,32 @@ async function runStage4Verification() {
   };
   fs.writeFileSync(path.join(runArtifactsDir, 'manifest.json'), JSON.stringify(manifest, null, 2), 'utf8');
 
-  // 4. Update root stage4_live_results.json with platform-independent forward slash path
-  finalSummary.evidencePath = path.relative(process.cwd(), runArtifactsDir).replace(/\\/g, '/');
-  finalSummary.manifest = manifest;
+  // 4. Update root stage4_live_results.json with platform-independent forward slash path.
+  // IMPORTANT: result.json (the artifact file hashed above) must never be written again —
+  // evidencePath and manifest are added only to the in-memory copy written to the root file.
+  const rootResultsCopy = Object.assign({}, finalSummary, {
+    evidencePath: path.relative(process.cwd(), runArtifactsDir).replace(/\\\/g, '/'),
+    manifest,
+  });
   const rootResultsPath = path.join(process.cwd(), 'stage4_live_results.json');
-  fs.writeFileSync(rootResultsPath, JSON.stringify(finalSummary, null, 2), 'utf8');
+  fs.writeFileSync(rootResultsPath, JSON.stringify(rootResultsCopy, null, 2), 'utf8');
+
+  // 5. Post-packaging integrity check: re-hash result.json to confirm it was never modified
+  //    after the manifest hash was recorded.
+  {
+    const artifactResultPath = path.join(runArtifactsDir, 'result.json');
+    const verifyContent = fs.readFileSync(artifactResultPath);
+    const verifyHash = crypto.createHash('sha256').update(verifyContent).digest('hex');
+    const manifestHash = fileHashes['result.json']?.sha256;
+    if (verifyHash !== manifestHash) {
+      log('INTEGRITY FAILURE: result.json sha256 mismatch — file was modified after hashing!');
+      log(`  Expected (manifest): ${manifestHash}`);
+      log(`  Actual   (file):     ${verifyHash}`);
+      // Do not exit here — verdict is already finalised; surface the error in logs.
+    } else {
+      log('Integrity check passed: result.json sha256 matches manifest.');
+    }
+  }
 
   log(`Immutable evidence written to: ${runArtifactsDir}`);
   log(`Updated root results: ${rootResultsPath}`);
