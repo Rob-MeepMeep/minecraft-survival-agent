@@ -4,6 +4,12 @@ An autonomous, deterministic Minecraft Java Edition survival agent built with [M
 
 The agent survives the first natural day and night cycle (24,000 ticks) autonomously: it gathers wood and stone, crafts wooden and stone pickaxes, procures food, evades hostile mobs, constructs a verified 25-block shelter before dusk, audits enclosure integrity through the night, emerges safely at dawn, and resumes progression—**with zero slash commands, zero harness injections, and zero external AI/LLM API requirements**.
 
+### 🎯 Stage 4 Acceptance Status: **ACCEPTED** (15/15 Gates Passed)
+- **Live Run ID:** [`stage4-1790615796794`](file:///c:/Users/rob_k/Desktop/Minecraft%20Agent/artifacts/stage4-runs/stage4-1790615796794/result.json)
+- **Full Verification Report:** [`STAGE_4_VERIFICATION_REPORT.md`](file:///c:/Users/rob_k/Desktop/Minecraft%20Agent/STAGE_4_VERIFICATION_REPORT.md)
+- **Vitals:** 20/20 HP (0 damage taken), 20/20 Food across 24,000 continuous ticks (~20 mins wall time).
+- **Enclosure Integrity:** 1,242 night audits passed, 0 breaches, zero operator slash commands, zero post-boundary injections.
+
 ---
 
 ## Architecture & Design Principles
