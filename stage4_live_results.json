@@ -1,173 +1,165 @@
 {
-  "runId": "stage4-1790615796794",
-  "sourceCommit": "69afec4d3530787e5910e9332040a0bff4dd699c",
+  "runId": "stage4-1790541075638",
+  "sourceCommit": "2f52ff436ad2be4f1a99f548fa363db3cb1786c2",
   "verdict": "STAGE_4_ACCEPTED",
-  "passedGates": 15,
-  "totalGates": 15,
+  "passedGates": 11,
+  "totalGates": 11,
   "totalAdvancingTicks": 24000,
-  "durationSeconds": 1200,
+  "durationSeconds": 1199,
   "finalVitals": {
-    "health": 20,
-    "food": 20,
-    "saturation": 5
+    "health": 0.0000019073486328125,
+    "food": 17,
+    "saturation": 0
   },
   "finalInventory": [
+    {
+      "name": "wooden_pickaxe",
+      "count": 1
+    },
     {
       "name": "stone_pickaxe",
       "count": 1
     },
     {
-      "name": "wooden_pickaxe",
-      "count": 1
-    },
-    {
-      "name": "oak_log",
-      "count": 1
-    },
-    {
       "name": "dirt",
-      "count": 8
-    },
-    {
-      "name": "red_tulip",
-      "count": 3
-    },
-    {
-      "name": "stick",
-      "count": 2
-    },
-    {
-      "name": "oak_planks",
       "count": 6
     },
     {
-      "name": "wooden_pickaxe",
+      "name": "birch_planks",
+      "count": 3
+    },
+    {
+      "name": "wildflowers",
+      "count": 4
+    },
+    {
+      "name": "wheat_seeds",
       "count": 1
     }
   ],
   "milestones": [
     {
       "milestone": "wooden_pickaxe",
-      "timestamp": "2026-09-28T17:33:46.986Z",
-      "worldAge": 769279,
-      "timeOfDay": 1278,
-      "worldAgeDelta": 560,
-      "expectedModularTimeOfDay": 1278,
+      "timestamp": "2026-09-27T20:37:43.861Z",
+      "worldAge": 745483,
+      "timeOfDay": 1482,
+      "worldAgeDelta": 780,
+      "expectedModularTimeOfDay": 1482,
       "drift": 0,
       "position": {
-        "x": 18.3,
-        "y": 103,
-        "z": -3.5
+        "x": -133.5,
+        "y": 63,
+        "z": 101.5
       },
       "vitals": {
-        "health": 20,
-        "food": 20,
-        "saturation": 5
+        "health": 16.000001907348633,
+        "food": 17,
+        "saturation": 0
       },
       "currentGoal": "stone_pickaxe",
       "goalStackDepth": 0
     },
     {
       "milestone": "stone_pickaxe",
-      "timestamp": "2026-09-28T17:33:46.986Z",
-      "worldAge": 769279,
-      "timeOfDay": 1278,
-      "worldAgeDelta": 560,
-      "expectedModularTimeOfDay": 1278,
-      "drift": 0,
+      "timestamp": "2026-09-27T20:38:18.161Z",
+      "worldAge": 746163,
+      "timeOfDay": 2161,
+      "worldAgeDelta": 1460,
+      "expectedModularTimeOfDay": 2162,
+      "drift": 1,
       "position": {
-        "x": 18.3,
-        "y": 103,
-        "z": -3.5
+        "x": -131.6,
+        "y": 64,
+        "z": 103.5
       },
       "vitals": {
-        "health": 20,
-        "food": 20,
-        "saturation": 5
+        "health": 16.000001907348633,
+        "food": 17,
+        "saturation": 0
       },
       "currentGoal": "stone_pickaxe",
       "goalStackDepth": 0
     },
     {
       "milestone": "building_reserve_acquired",
-      "timestamp": "2026-09-28T17:33:54.412Z",
-      "worldAge": 769419,
-      "timeOfDay": 1418,
-      "worldAgeDelta": 700,
-      "expectedModularTimeOfDay": 1418,
+      "timestamp": "2026-09-27T20:39:20.464Z",
+      "worldAge": 747403,
+      "timeOfDay": 3402,
+      "worldAgeDelta": 2700,
+      "expectedModularTimeOfDay": 3402,
       "drift": 0,
       "position": {
-        "x": 18.5,
-        "y": 102,
-        "z": -4.3
+        "x": -140.5,
+        "y": 66,
+        "z": 106.7
       },
       "vitals": {
-        "health": 20,
-        "food": 20,
-        "saturation": 5
+        "health": 16.000001907348633,
+        "food": 17,
+        "saturation": 0
       },
       "currentGoal": "maintain_building_reserve",
       "goalStackDepth": 0
     },
     {
       "milestone": "shelter_enclosed",
-      "timestamp": "2026-09-28T17:41:21.339Z",
-      "worldAge": 778359,
-      "timeOfDay": 10358,
-      "worldAgeDelta": 9640,
-      "expectedModularTimeOfDay": 10358,
+      "timestamp": "2026-09-27T20:45:08.573Z",
+      "worldAge": 754363,
+      "timeOfDay": 10362,
+      "worldAgeDelta": 9660,
+      "expectedModularTimeOfDay": 10362,
       "drift": 0,
       "position": {
-        "x": 17.5,
-        "y": 102,
-        "z": -5.5
+        "x": -171.3,
+        "y": 67,
+        "z": 118.6
       },
       "vitals": {
-        "health": 20,
-        "food": 20,
-        "saturation": 5
+        "health": 0.0000019073486328125,
+        "food": 17,
+        "saturation": 0
       },
       "currentGoal": "build_shelter",
       "goalStackDepth": 1
     },
     {
       "milestone": "night_survived",
-      "timestamp": "2026-09-28T17:51:53.836Z",
-      "worldAge": 791019,
-      "timeOfDay": 23018,
+      "timestamp": "2026-09-27T20:55:39.806Z",
+      "worldAge": 767003,
+      "timeOfDay": 23002,
       "worldAgeDelta": 22300,
-      "expectedModularTimeOfDay": 23018,
+      "expectedModularTimeOfDay": 23002,
       "drift": 0,
       "position": {
-        "x": 17.5,
-        "y": 102,
-        "z": -5.5
+        "x": -171.3,
+        "y": 67,
+        "z": 118.6
       },
       "vitals": {
-        "health": 20,
-        "food": 20,
-        "saturation": 5
+        "health": 0.0000019073486328125,
+        "food": 17,
+        "saturation": 0
       },
       "currentGoal": "wait_out_night",
       "goalStackDepth": 1
     },
     {
       "milestone": "dawn_exit_completed",
-      "timestamp": "2026-09-28T17:51:57.220Z",
-      "worldAge": 791079,
-      "timeOfDay": 23077,
-      "worldAgeDelta": 22360,
-      "expectedModularTimeOfDay": 23078,
+      "timestamp": "2026-09-27T20:55:44.726Z",
+      "worldAge": 767083,
+      "timeOfDay": 23081,
+      "worldAgeDelta": 22380,
+      "expectedModularTimeOfDay": 23082,
       "drift": 1,
       "position": {
-        "x": 17.5,
-        "y": 102,
-        "z": -7.4
+        "x": -171.5,
+        "y": 67,
+        "z": 120.3
       },
       "vitals": {
-        "health": 20,
-        "food": 20,
-        "saturation": 5
+        "health": 0.0000019073486328125,
+        "food": 17,
+        "saturation": 0
       },
       "currentGoal": "leave_shelter",
       "goalStackDepth": 1
@@ -196,17 +188,7 @@
     {
       "gate": "Zero Player Deaths",
       "passed": true,
-      "detail": "Player survived with 20/20 HP"
-    },
-    {
-      "gate": "Minimum Health Safety Margin",
-      "passed": true,
-      "detail": "Minimum health was 20.00/20 (threshold >= 8)"
-    },
-    {
-      "gate": "Final Health Safety Margin",
-      "passed": true,
-      "detail": "Final health was 20.00/20 (threshold >= 12)"
+      "detail": "Player survived with 0.0000019073486328125/20 HP"
     },
     {
       "gate": "Continuous Game Tick Advancement",
@@ -214,69 +196,59 @@
       "detail": "24000 continuous natural advancing ticks (>= 24000) without skips"
     },
     {
-      "gate": "Natural Tool Progression",
-      "passed": true,
-      "detail": "Wooden pickaxe crafted before stone pickaxe via causal crafting sequence"
-    },
-    {
       "gate": "Natural Resource Acquisition",
       "passed": true,
-      "detail": "Derived from telemetry: 0 /give or /summon, 0 harness injections, all resources gathered naturally"
+      "detail": "Derived from telemetry: 0 /give or /summon, 0 harness injections, all resources gathered from world blocks/drops"
     },
     {
       "gate": "30-Block Building Reserve",
       "passed": true,
-      "detail": "Building reserve achieved at worldAge=769419, TOD=1418 (< 12000)"
+      "detail": "Building reserve achieved at worldAge=747403, TOD=3402 (< 12000)"
     },
     {
       "gate": "Complete Shelter Before Dusk (timeOfDay < 12000)",
       "passed": true,
-      "detail": "Shelter enclosed at worldAge=778359, TOD=10358 (< 12000)"
+      "detail": "Shelter enclosed at worldAge=754363, TOD=10362 (< 12000)"
     },
     {
       "gate": "Night Enclosure Integrity Maintained",
       "passed": true,
-      "detail": "Intact through night; 1242 audits passed, zero breaches detected"
+      "detail": "Intact through night; 1240 audits passed, zero breaches detected"
     },
     {
       "gate": "Critical Starvation Avoidance",
       "passed": true,
-      "detail": "Lowest hunger was 20/20 (maintained above critical threshold 6)"
+      "detail": "Lowest hunger was 17/20 (maintained above critical threshold 6)"
     },
     {
       "gate": "Safe Dawn Exit",
       "passed": true,
-      "detail": "Dawn exit executed at worldAge=791079, TOD=23077"
+      "detail": "Dawn exit executed at worldAge=767083, TOD=23081"
     },
     {
       "gate": "Progression Resumption",
       "passed": true,
       "detail": "Daytime progression goal causally resumed and action dispatched post-exit"
-    },
-    {
-      "gate": "Clean Execution Lifecycle & Safety",
-      "passed": true,
-      "detail": "No budget_exceeded, failed_unsafe, critical_health_no_recovery, or unresolved breach"
     }
   ],
   "metadata": {
-    "runId": "stage4-1790615796794",
-    "sourceCommit": "69afec4d3530787e5910e9332040a0bff4dd699c",
+    "runId": "stage4-1790541075638",
+    "sourceCommit": "2f52ff436ad2be4f1a99f548fa363db3cb1786c2",
     "worldIdentity": "overworld",
     "seed": null,
     "minecraftVersion": "26.1",
     "mineflayerVersion": "4.39.0",
     "nodeVersion": "v24.18.0",
     "server": "localhost:61375",
-    "worldAge": 768719,
-    "timeOfDay": 718,
+    "worldAge": 744703,
+    "timeOfDay": 702,
     "biome": "plains",
     "weather": "clear",
     "difficulty": "normal",
     "position": {
-      "x": 22.5,
-      "y": 105,
-      "z": -5.5
+      "x": -146.5,
+      "y": 66,
+      "z": 88.3
     },
     "health": 20,
     "food": 20,
@@ -284,184 +256,160 @@
     "inventorySnapshot": [],
     "nearbyEntities": [
       {
-        "name": "skeleton",
-        "distance": 24.7
+        "name": "spider",
+        "distance": 21.9
+      },
+      {
+        "name": "player",
+        "distance": 25.4
       },
       {
         "name": "zombie",
-        "distance": 30.4
+        "distance": 8.8
       },
       {
         "name": "skeleton",
-        "distance": 21.8
+        "distance": 30.6
+      },
+      {
+        "name": "skeleton",
+        "distance": 16.6
       },
       {
         "name": "spider",
-        "distance": 21.6
-      },
-      {
-        "name": "skeleton",
-        "distance": 24.6
-      },
-      {
-        "name": "creeper",
-        "distance": 22
-      },
-      {
-        "name": "creeper",
-        "distance": 29.9
-      },
-      {
-        "name": "creeper",
-        "distance": 24.2
+        "distance": 15.1
       },
       {
         "name": "item",
-        "distance": 29.7
+        "distance": 7.1
       },
       {
         "name": "item",
-        "distance": 30.1
+        "distance": 7.1
       },
       {
         "name": "item",
-        "distance": 5.2
-      },
-      {
-        "name": "item",
-        "distance": 5.2
-      },
-      {
-        "name": "item",
-        "distance": 5.3
-      },
-      {
-        "name": "item",
-        "distance": 5.3
-      },
-      {
-        "name": "item",
-        "distance": 5.6
-      },
-      {
-        "name": "item",
-        "distance": 5.3
+        "distance": 7
       }
     ],
     "nearbyResources": [
-      "short_grass",
       "grass_block",
       "dirt",
-      "stone"
+      "birch_leaves",
+      "stone",
+      "wildflowers",
+      "short_grass",
+      "sand",
+      "sandstone"
     ],
     "preflightResults": {
       "command_attempted": [
         {
           "command": "/gamerule doDaylightCycle true",
-          "timestamp": "2026-09-28T17:33:14.003Z"
+          "timestamp": "2026-09-27T20:37:01.181Z"
         },
         {
           "command": "/gamerule doMobSpawning true",
-          "timestamp": "2026-09-28T17:33:14.005Z"
+          "timestamp": "2026-09-27T20:37:01.182Z"
         },
         {
           "command": "/weather clear",
-          "timestamp": "2026-09-28T17:33:14.006Z"
+          "timestamp": "2026-09-27T20:37:01.183Z"
         },
         {
           "command": "/clear @s",
-          "timestamp": "2026-09-28T17:33:14.006Z"
+          "timestamp": "2026-09-27T20:37:01.184Z"
         }
       ],
       "command_accepted": [
         {
           "command": "/gamerule doMobSpawning true",
           "response": "gamerule doDaylightCycle true<--[HERE]",
-          "timestamp": "2026-09-28T17:33:14.005Z"
+          "timestamp": "2026-09-27T20:37:01.182Z"
         }
       ],
       "command_rejected": [
         {
           "command": "/gamerule doDaylightCycle true",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-28T17:33:14.003Z"
+          "timestamp": "2026-09-27T20:37:01.181Z"
         },
         {
           "command": "/weather clear",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-28T17:33:14.006Z"
+          "timestamp": "2026-09-27T20:37:01.183Z"
         },
         {
           "command": "/clear @s",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-28T17:33:14.006Z"
+          "timestamp": "2026-09-27T20:37:01.184Z"
         }
       ],
       "server_response": [
         {
           "command": "/gamerule doDaylightCycle true",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-28T17:33:14.003Z"
+          "timestamp": "2026-09-27T20:37:01.181Z"
         },
         {
           "command": "/gamerule doMobSpawning true",
           "response": "gamerule doDaylightCycle true<--[HERE]",
-          "timestamp": "2026-09-28T17:33:14.005Z"
+          "timestamp": "2026-09-27T20:37:01.182Z"
         },
         {
           "command": "/weather clear",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-28T17:33:14.006Z"
+          "timestamp": "2026-09-27T20:37:01.183Z"
         },
         {
           "command": "/clear @s",
           "response": "Unknown or incomplete command. See below for error",
-          "timestamp": "2026-09-28T17:33:14.006Z"
+          "timestamp": "2026-09-27T20:37:01.184Z"
         }
       ]
     }
   },
-  "evidencePath": "artifacts/stage4-runs/stage4-1790615796794",
+  "evidencePath": "artifacts/stage4-runs/stage4-1790541075638",
   "manifest": {
     "schemaVersion": 1,
-    "runId": "stage4-1790615796794",
-    "sourceCommit": "69afec4d3530787e5910e9332040a0bff4dd699c",
-    "timestamp": "2026-09-28T17:53:18.800Z",
+    "runId": "stage4-1790541075638",
+    "sourceCommit": "2f52ff436ad2be4f1a99f548fa363db3cb1786c2",
+    "timestamp": "2026-09-28T20:35:02.033Z",
     "verdict": "STAGE_4_ACCEPTED",
-    "passedGates": 15,
-    "totalGates": 15,
+    "passedGates": 11,
+    "totalGates": 11,
     "files": {
       "result.json": {
-        "sizeBytes": 10360,
-        "sha256": "d887cbbe42cfee759970e8b9d1a8f45619852573077ebe7bceb0078f7e9e5965"
+        "sizeBytes": 10945,
+        "sha256": "7fb56875466cc3d4eaea2b0ff08a80a347f22f41de3bd9a9e2e13c6c9420df40"
       },
       "metadata.json": {
-        "sizeBytes": 3605,
-        "sha256": "3414819dcb086e443537c3e65c36e39f9e87b97926677fc7a8886c7d2ee46a1d"
+        "sizeBytes": 3261,
+        "sha256": "959b63851f04632cc53ec01b9787bd99f9a13f6b3eb0b1863025ef3e29371448"
       },
       "config_fingerprint.json": {
-        "sizeBytes": 481,
-        "sha256": "d5dc09ddbd3b3c6ca3228ac15f9e6b6dd45338008c315a660cf807e023f05de0"
+        "sizeBytes": 243,
+        "sha256": "dd93092c636147f6d9330384eac244649b0c9f518ea7f9d3804c2deee0c43a6c"
       },
       "milestones.json": {
-        "sizeBytes": 2641,
-        "sha256": "08cc25dda89c7e407bfb94258eb06b5743651db31df4c47caa857d76e720e1ef"
+        "sizeBytes": 2760,
+        "sha256": "b410dfc2c04c7034a81ba0f17f2fbb402f9fb76b0cb504450ae496a0637b0ac0"
       },
       "damage_timeline.json": {
-        "sizeBytes": 2,
-        "sha256": "4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945"
+        "sizeBytes": 3004,
+        "sha256": "9473f2d1a7eea628320e50586b24df6df2185ac4f1856a1bdfdee3c560bd1fad"
       },
       "actions_summary.json": {
-        "sizeBytes": 255,
-        "sha256": "5d4dece128e60533707efb1fccd1f30c287efec1c17ed9f0ae39137039f83f9e"
+        "sizeBytes": 268,
+        "sha256": "d4a967865c3e9db1fb5332bc91931c0b7ee3f7ebf5ba547a289f137eae601260"
       },
       "telemetry.jsonl.gz": {
-        "sizeBytes": 21374,
-        "sha256": "fc4faaf79055c15d7b983ae5eb9a8df314d936736a55d1ed09aa9f7da3d792ec"
+        "sizeBytes": 26306,
+        "sha256": "96fd33a0461888a5b4c1b09f42d562f7c3adc390537c72e506f6d2eef32e1639"
       },
       "transcript.txt.gz": {
-        "sizeBytes": 19265,
-        "sha256": "166a80b79e951a01811ab4f587061a64800392fdd27d82dc29461452bb72f239"
+        "sizeBytes": 20927,
+        "sha256": "4365fd02c4effa563b3bb3b1613aece302d8f184fa8b99891934b5f5483f1813"
       }
     }
   }
