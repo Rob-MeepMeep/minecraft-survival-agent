@@ -1,0 +1,19 @@
+{
+  "totalAttempted": 236,
+  "succeeded": 116,
+  "failed": 120,
+  "actions": {
+    "gather": 65,
+    "navigate": 23,
+    "attack": 2,
+    "craft": 6,
+    "place": 137,
+    "equip": 3
+  },
+  "failures": {
+    "gather:Exceeded timeout of 30000ms": 1,
+    "gather:hostile_threat_nearby": 12,
+    "attack:Exceeded timeout of 15000ms": 2,
+    "place:placement_failed": 105
+  }
+}

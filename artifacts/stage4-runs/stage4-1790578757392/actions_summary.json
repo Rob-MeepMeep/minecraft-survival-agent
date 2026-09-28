@@ -1,0 +1,18 @@
+{
+  "totalAttempted": 238,
+  "succeeded": 48,
+  "failed": 190,
+  "actions": {
+    "gather": 79,
+    "craft": 7,
+    "place": 150,
+    "equip": 1,
+    "navigate": 1
+  },
+  "failures": {
+    "gather:drop_not_collected": 3,
+    "gather:could_not_reach_block": 36,
+    "gather:cannot_dig_block": 5,
+    "place:placement_failed": 146
+  }
+}

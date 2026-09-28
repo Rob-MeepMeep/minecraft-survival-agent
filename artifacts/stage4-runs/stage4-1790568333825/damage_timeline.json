@@ -1,0 +1,92 @@
+[
+  {
+    "timestamp": "2026-09-28T04:07:48.874Z",
+    "timeOfDay": 1980,
+    "worldAge": 107799,
+    "controllerRunId": "controller-run-1",
+    "generation": 1,
+    "currentGoal": "stone_pickaxe",
+    "damageAmount": 3.17,
+    "previousHealth": 20,
+    "currentHealth": 16.83,
+    "position": {
+      "x": -594.5,
+      "y": 92,
+      "z": -115.5
+    },
+    "attacker": {
+      "id": 28595,
+      "name": "skeleton",
+      "position": {
+        "x": -595.11,
+        "y": 93,
+        "z": -116.86
+      },
+      "distance": 1.8
+    },
+    "nearbyThreats": [
+      {
+        "id": 28595,
+        "name": "skeleton",
+        "distance": 1.8
+      }
+    ],
+    "reason": "tick",
+    "healthState": "good"
+  },
+  {
+    "timestamp": "2026-09-28T04:08:48.033Z",
+    "timeOfDay": 3160,
+    "worldAge": 108979,
+    "controllerRunId": "controller-run-1",
+    "generation": 1,
+    "currentGoal": "flee_threat",
+    "damageAmount": 4,
+    "previousHealth": 20,
+    "currentHealth": 16,
+    "position": {
+      "x": -578.5,
+      "y": 86,
+      "z": -94.55
+    },
+    "attacker": null,
+    "nearbyThreats": [],
+    "reason": "tick",
+    "healthState": "good"
+  },
+  {
+    "timestamp": "2026-09-28T04:08:59.494Z",
+    "timeOfDay": 3399,
+    "worldAge": 109219,
+    "controllerRunId": "controller-run-1",
+    "generation": 1,
+    "currentGoal": "flee_threat",
+    "damageAmount": 4,
+    "previousHealth": 17,
+    "currentHealth": 13,
+    "position": {
+      "x": -582.51,
+      "y": 85,
+      "z": -99.5
+    },
+    "attacker": {
+      "id": 28595,
+      "name": "skeleton",
+      "position": {
+        "x": -586.88,
+        "y": 87,
+        "z": -113.14
+      },
+      "distance": 14.47
+    },
+    "nearbyThreats": [
+      {
+        "id": 28595,
+        "name": "skeleton",
+        "distance": 14.47
+      }
+    ],
+    "reason": "tick",
+    "healthState": "warning"
+  }
+]

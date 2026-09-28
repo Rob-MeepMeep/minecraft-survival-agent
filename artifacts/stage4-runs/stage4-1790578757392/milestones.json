@@ -1,0 +1,65 @@
+[
+  {
+    "milestone": "wooden_pickaxe",
+    "timestamp": "2026-09-28T07:13:47.886Z",
+    "worldAge": 25299,
+    "timeOfDay": 1298,
+    "worldAgeDelta": 680,
+    "expectedModularTimeOfDay": 1297,
+    "drift": 1,
+    "position": {
+      "x": 16.4,
+      "y": 102,
+      "z": -3.5
+    },
+    "vitals": {
+      "health": 20,
+      "food": 20,
+      "saturation": 5
+    },
+    "currentGoal": "stone_pickaxe",
+    "goalStackDepth": 0
+  },
+  {
+    "milestone": "building_reserve_acquired",
+    "timestamp": "2026-09-28T07:19:09.068Z",
+    "worldAge": 31719,
+    "timeOfDay": 7717,
+    "worldAgeDelta": 7100,
+    "expectedModularTimeOfDay": 7717,
+    "drift": 0,
+    "position": {
+      "x": 5.7,
+      "y": 99,
+      "z": -0.5
+    },
+    "vitals": {
+      "health": 20,
+      "food": 20,
+      "saturation": 5
+    },
+    "currentGoal": "maintain_building_reserve",
+    "goalStackDepth": 1
+  },
+  {
+    "milestone": "stone_pickaxe",
+    "timestamp": "2026-09-28T07:20:05.137Z",
+    "worldAge": 32839,
+    "timeOfDay": 8838,
+    "worldAgeDelta": 8220,
+    "expectedModularTimeOfDay": 8837,
+    "drift": 1,
+    "position": {
+      "x": 16.6,
+      "y": 103,
+      "z": -1.5
+    },
+    "vitals": {
+      "health": 20,
+      "food": 20,
+      "saturation": 5
+    },
+    "currentGoal": "stone_pickaxe",
+    "goalStackDepth": 0
+  }
+]

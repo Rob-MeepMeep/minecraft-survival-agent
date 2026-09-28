@@ -1,0 +1,400 @@
+{
+  "runId": "stage4-1790568333825",
+  "sourceCommit": "b3989bb044f9aa29bf33247e8d0e6ae5ae8ceda7",
+  "verdict": "STAGE_4_FAILED",
+  "passedGates": 11,
+  "totalGates": 15,
+  "totalAdvancingTicks": 24000,
+  "durationSeconds": 1200,
+  "finalVitals": {
+    "health": 13,
+    "food": 17,
+    "saturation": 0
+  },
+  "finalInventory": [
+    {
+      "name": "wooden_pickaxe",
+      "count": 1
+    },
+    {
+      "name": "stick",
+      "count": 2
+    },
+    {
+      "name": "dirt",
+      "count": 18
+    },
+    {
+      "name": "oak_planks",
+      "count": 3
+    },
+    {
+      "name": "wheat_seeds",
+      "count": 2
+    }
+  ],
+  "milestones": [
+    {
+      "milestone": "wooden_pickaxe",
+      "timestamp": "2026-09-28T04:09:26.833Z",
+      "worldAge": 109759,
+      "timeOfDay": 3940,
+      "worldAgeDelta": 3300,
+      "expectedModularTimeOfDay": 3940,
+      "drift": 0,
+      "position": {
+        "x": -593.5,
+        "y": 89,
+        "z": -112.3
+      },
+      "vitals": {
+        "health": 13,
+        "food": 17,
+        "saturation": 0
+      },
+      "currentGoal": "stone_pickaxe",
+      "goalStackDepth": 0
+    },
+    {
+      "milestone": "building_reserve_acquired",
+      "timestamp": "2026-09-28T04:10:56.704Z",
+      "worldAge": 111559,
+      "timeOfDay": 5740,
+      "worldAgeDelta": 5100,
+      "expectedModularTimeOfDay": 5740,
+      "drift": 0,
+      "position": {
+        "x": -599.5,
+        "y": 92,
+        "z": -122.5
+      },
+      "vitals": {
+        "health": 13,
+        "food": 17,
+        "saturation": 0
+      },
+      "currentGoal": "build_shelter",
+      "goalStackDepth": 0
+    },
+    {
+      "milestone": "shelter_enclosed",
+      "timestamp": "2026-09-28T04:11:13.592Z",
+      "worldAge": 111899,
+      "timeOfDay": 6080,
+      "worldAgeDelta": 5440,
+      "expectedModularTimeOfDay": 6080,
+      "drift": 0,
+      "position": {
+        "x": -594.5,
+        "y": 91,
+        "z": -118.4
+      },
+      "vitals": {
+        "health": 13,
+        "food": 17,
+        "saturation": 0
+      },
+      "currentGoal": "build_shelter",
+      "goalStackDepth": 0
+    },
+    {
+      "milestone": "night_survived",
+      "timestamp": "2026-09-28T04:11:13.604Z",
+      "worldAge": 111899,
+      "timeOfDay": 6080,
+      "worldAgeDelta": 5440,
+      "expectedModularTimeOfDay": 6080,
+      "drift": 0,
+      "position": {
+        "x": -594.5,
+        "y": 91,
+        "z": -118.4
+      },
+      "vitals": {
+        "health": 13,
+        "food": 17,
+        "saturation": 0
+      },
+      "currentGoal": "wait_out_night",
+      "goalStackDepth": 0
+    },
+    {
+      "milestone": "dawn_exit_completed",
+      "timestamp": "2026-09-28T04:11:16.982Z",
+      "worldAge": 111959,
+      "timeOfDay": 6140,
+      "worldAgeDelta": 5500,
+      "expectedModularTimeOfDay": 6140,
+      "drift": 0,
+      "position": {
+        "x": -594.5,
+        "y": 91,
+        "z": -116.5
+      },
+      "vitals": {
+        "health": 13,
+        "food": 17,
+        "saturation": 0
+      },
+      "currentGoal": "leave_shelter",
+      "goalStackDepth": 0
+    }
+  ],
+  "controllerMilestones": {
+    "woodenPickaxeAchieved": true,
+    "stonePickaxeAchieved": false,
+    "foodReserveAcquired": false,
+    "buildingReserveAcquired": true,
+    "shelterEnclosed": true,
+    "nightSurvived": true,
+    "dawnExitCompleted": true
+  },
+  "gates": [
+    {
+      "gate": "Zero Production Slash Commands",
+      "passed": true,
+      "detail": "Issued 0 production slash commands (must be 0)"
+    },
+    {
+      "gate": "Zero Post-Boundary Harness Injections",
+      "passed": true,
+      "detail": "Harness issued 0 commands after natural_run_started boundary (must be 0)"
+    },
+    {
+      "gate": "Zero Player Deaths",
+      "passed": true,
+      "detail": "Player survived with 13/20 HP"
+    },
+    {
+      "gate": "Minimum Health Safety Margin",
+      "passed": true,
+      "detail": "Minimum health was 13.00/20 (threshold >= 8)"
+    },
+    {
+      "gate": "Final Health Safety Margin",
+      "passed": true,
+      "detail": "Final health was 13.00/20 (threshold >= 12)"
+    },
+    {
+      "gate": "Continuous Game Tick Advancement",
+      "passed": true,
+      "detail": "24000 continuous natural advancing ticks (>= 24000) without skips"
+    },
+    {
+      "gate": "Natural Tool Progression",
+      "passed": false,
+      "detail": "Tool progression sequence was not verified causally"
+    },
+    {
+      "gate": "Natural Resource Acquisition",
+      "passed": true,
+      "detail": "Derived from telemetry: 0 /give or /summon, 0 harness injections, all resources gathered naturally"
+    },
+    {
+      "gate": "30-Block Building Reserve",
+      "passed": true,
+      "detail": "Building reserve achieved at worldAge=111559, TOD=5740 (< 12000)"
+    },
+    {
+      "gate": "Complete Shelter Before Dusk (timeOfDay < 12000)",
+      "passed": true,
+      "detail": "Shelter enclosed at worldAge=111899, TOD=6080 (< 12000)"
+    },
+    {
+      "gate": "Night Enclosure Integrity Maintained",
+      "passed": false,
+      "detail": "Intact through night; 0 audits passed, zero breaches detected"
+    },
+    {
+      "gate": "Critical Starvation Avoidance",
+      "passed": true,
+      "detail": "Lowest hunger was 20/20 (maintained above critical threshold 6)"
+    },
+    {
+      "gate": "Safe Dawn Exit",
+      "passed": false,
+      "detail": "Dawn exit executed at worldAge=111959, TOD=6140"
+    },
+    {
+      "gate": "Progression Resumption",
+      "passed": false,
+      "detail": "Progression resumption not verified following dawn exit"
+    },
+    {
+      "gate": "Clean Execution Lifecycle & Safety",
+      "passed": true,
+      "detail": "No budget_exceeded, failed_unsafe, critical_health_no_recovery, or unresolved breach"
+    }
+  ],
+  "metadata": {
+    "runId": "stage4-1790568333825",
+    "sourceCommit": "b3989bb044f9aa29bf33247e8d0e6ae5ae8ceda7",
+    "worldIdentity": "overworld",
+    "seed": null,
+    "minecraftVersion": "26.1",
+    "mineflayerVersion": "4.39.0",
+    "nodeVersion": "v24.18.0",
+    "server": "localhost:61375",
+    "worldAge": 106459,
+    "timeOfDay": 640,
+    "biome": "plains",
+    "weather": "clear",
+    "difficulty": "normal",
+    "position": {
+      "x": -584.5,
+      "y": 71,
+      "z": -209.5
+    },
+    "health": 20,
+    "food": 20,
+    "saturation": 5,
+    "inventorySnapshot": [],
+    "nearbyEntities": [
+      {
+        "name": "item",
+        "distance": 20
+      },
+      {
+        "name": "cod",
+        "distance": 23.3
+      },
+      {
+        "name": "cod",
+        "distance": 23.7
+      },
+      {
+        "name": "cod",
+        "distance": 23.1
+      },
+      {
+        "name": "cod",
+        "distance": 22.7
+      },
+      {
+        "name": "cod",
+        "distance": 24.2
+      },
+      {
+        "name": "cod",
+        "distance": 23.5
+      },
+      {
+        "name": "cod",
+        "distance": 22
+      },
+      {
+        "name": "cod",
+        "distance": 25.5
+      },
+      {
+        "name": "cod",
+        "distance": 23.4
+      },
+      {
+        "name": "cod",
+        "distance": 24.3
+      },
+      {
+        "name": "cod",
+        "distance": 23.1
+      },
+      {
+        "name": "cod",
+        "distance": 23.2
+      },
+      {
+        "name": "salmon",
+        "distance": 29.1
+      },
+      {
+        "name": "cod",
+        "distance": 30.6
+      },
+      {
+        "name": "salmon",
+        "distance": 30.2
+      },
+      {
+        "name": "cod",
+        "distance": 21.2
+      },
+      {
+        "name": "cod",
+        "distance": 22.9
+      }
+    ],
+    "nearbyResources": [
+      "short_grass",
+      "grass_block",
+      "dirt",
+      "stone",
+      "coal_ore"
+    ],
+    "preflightResults": {
+      "command_attempted": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "timestamp": "2026-09-28T04:06:40.996Z"
+        },
+        {
+          "command": "/gamerule doMobSpawning true",
+          "timestamp": "2026-09-28T04:06:40.999Z"
+        },
+        {
+          "command": "/weather clear",
+          "timestamp": "2026-09-28T04:06:40.999Z"
+        },
+        {
+          "command": "/clear @s",
+          "timestamp": "2026-09-28T04:06:41.000Z"
+        }
+      ],
+      "command_accepted": [
+        {
+          "command": "/weather clear",
+          "response": "gamerule doMobSpawning true<--[HERE]",
+          "timestamp": "2026-09-28T04:06:40.999Z"
+        }
+      ],
+      "command_rejected": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-28T04:06:40.996Z"
+        },
+        {
+          "command": "/gamerule doMobSpawning true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-28T04:06:40.999Z"
+        },
+        {
+          "command": "/clear @s",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-28T04:06:41.000Z"
+        }
+      ],
+      "server_response": [
+        {
+          "command": "/gamerule doDaylightCycle true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-28T04:06:40.996Z"
+        },
+        {
+          "command": "/gamerule doMobSpawning true",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-28T04:06:40.999Z"
+        },
+        {
+          "command": "/weather clear",
+          "response": "gamerule doMobSpawning true<--[HERE]",
+          "timestamp": "2026-09-28T04:06:40.999Z"
+        },
+        {
+          "command": "/clear @s",
+          "response": "Unknown or incomplete command. See below for error",
+          "timestamp": "2026-09-28T04:06:41.000Z"
+        }
+      ]
+    }
+  }
+}

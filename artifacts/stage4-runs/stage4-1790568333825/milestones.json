@@ -1,0 +1,107 @@
+[
+  {
+    "milestone": "wooden_pickaxe",
+    "timestamp": "2026-09-28T04:09:26.833Z",
+    "worldAge": 109759,
+    "timeOfDay": 3940,
+    "worldAgeDelta": 3300,
+    "expectedModularTimeOfDay": 3940,
+    "drift": 0,
+    "position": {
+      "x": -593.5,
+      "y": 89,
+      "z": -112.3
+    },
+    "vitals": {
+      "health": 13,
+      "food": 17,
+      "saturation": 0
+    },
+    "currentGoal": "stone_pickaxe",
+    "goalStackDepth": 0
+  },
+  {
+    "milestone": "building_reserve_acquired",
+    "timestamp": "2026-09-28T04:10:56.704Z",
+    "worldAge": 111559,
+    "timeOfDay": 5740,
+    "worldAgeDelta": 5100,
+    "expectedModularTimeOfDay": 5740,
+    "drift": 0,
+    "position": {
+      "x": -599.5,
+      "y": 92,
+      "z": -122.5
+    },
+    "vitals": {
+      "health": 13,
+      "food": 17,
+      "saturation": 0
+    },
+    "currentGoal": "build_shelter",
+    "goalStackDepth": 0
+  },
+  {
+    "milestone": "shelter_enclosed",
+    "timestamp": "2026-09-28T04:11:13.592Z",
+    "worldAge": 111899,
+    "timeOfDay": 6080,
+    "worldAgeDelta": 5440,
+    "expectedModularTimeOfDay": 6080,
+    "drift": 0,
+    "position": {
+      "x": -594.5,
+      "y": 91,
+      "z": -118.4
+    },
+    "vitals": {
+      "health": 13,
+      "food": 17,
+      "saturation": 0
+    },
+    "currentGoal": "build_shelter",
+    "goalStackDepth": 0
+  },
+  {
+    "milestone": "night_survived",
+    "timestamp": "2026-09-28T04:11:13.604Z",
+    "worldAge": 111899,
+    "timeOfDay": 6080,
+    "worldAgeDelta": 5440,
+    "expectedModularTimeOfDay": 6080,
+    "drift": 0,
+    "position": {
+      "x": -594.5,
+      "y": 91,
+      "z": -118.4
+    },
+    "vitals": {
+      "health": 13,
+      "food": 17,
+      "saturation": 0
+    },
+    "currentGoal": "wait_out_night",
+    "goalStackDepth": 0
+  },
+  {
+    "milestone": "dawn_exit_completed",
+    "timestamp": "2026-09-28T04:11:16.982Z",
+    "worldAge": 111959,
+    "timeOfDay": 6140,
+    "worldAgeDelta": 5500,
+    "expectedModularTimeOfDay": 6140,
+    "drift": 0,
+    "position": {
+      "x": -594.5,
+      "y": 91,
+      "z": -116.5
+    },
+    "vitals": {
+      "health": 13,
+      "food": 17,
+      "saturation": 0
+    },
+    "currentGoal": "leave_shelter",
+    "goalStackDepth": 0
+  }
+]

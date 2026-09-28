@@ -1,0 +1,15 @@
+{
+  "totalAttempted": 212,
+  "succeeded": 62,
+  "failed": 150,
+  "actions": {
+    "gather": 184,
+    "navigate": 3,
+    "place": 25
+  },
+  "failures": {
+    "gather:could_not_reach_block": 80,
+    "gather:drop_not_collected": 3,
+    "gather:cannot_dig_block": 67
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schemaVersion": 1,
+  "runId": "stage4-1790568333825",
+  "sourceCommit": "b3989bb044f9aa29bf33247e8d0e6ae5ae8ceda7",
+  "timestamp": "2026-09-28T04:26:41.386Z",
+  "verdict": "STAGE_4_FAILED",
+  "passedGates": 11,
+  "totalGates": 15,
+  "files": {
+    "result.json": {
+      "sizeBytes": 9784,
+      "sha256": "8786c54eae616ed3dbfd913b19800b2f5f5e676a4d6d295d53b5a89c51c68db5"
+    },
+    "metadata.json": {
+      "sizeBytes": 3704,
+      "sha256": "11636b3bd0bba19c22b0d5ae761fa4fd3592cd0621087449a5051453c337c7a0"
+    },
+    "config_fingerprint.json": {
+      "sizeBytes": 481,
+      "sha256": "5f2323d340aa2f234b77b0a91e738607374cd0e74f6ef70bbe9f04409f9d4012"
+    },
+    "milestones.json": {
+      "sizeBytes": 2206,
+      "sha256": "b05d9a33a667a2d54dc87728c9e1a8408ed3e1e0345510ecbeb283cb147c5a7e"
+    },
+    "damage_timeline.json": {
+      "sizeBytes": 1858,
+      "sha256": "c38fcaefb1de30c3277b86026a02dbd7e88583ccfb37a549a68da976e19faecf"
+    },
+    "actions_summary.json": {
+      "sizeBytes": 373,
+      "sha256": "fe55cf9cd6ae98ffb7988fbcef1f0ae0866c7bb18784abf695251d61d55f5d7b"
+    },
+    "telemetry.jsonl.gz": {
+      "sizeBytes": 22652,
+      "sha256": "03ef1ef50158e407443ea83cd17a672c4fc10f91e7e27953b3d9137025b0d144"
+    },
+    "transcript.txt.gz": {
+      "sizeBytes": 15875,
+      "sha256": "ebe43a8bedcf758a4b9da130d25db1282bdd45763eed2eed22e8640dbe260922"
+    }
+  }
+}
