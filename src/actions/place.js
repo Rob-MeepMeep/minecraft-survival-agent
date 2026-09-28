@@ -58,6 +58,52 @@ function isGravityBlock(blockName) {
 }
 
 /**
+ * Interactive blocks that open a GUI or trigger state when clicked without sneaking.
+ */
+const INTERACTIVE_BLOCKS = new Set([
+  'crafting_table', 'furnace', 'blast_furnace', 'smoker',
+  'chest', 'trapped_chest', 'ender_chest', 'barrel', 'shulker_box',
+  'dispenser', 'dropper', 'hopper',
+  'enchanting_table', 'anvil', 'chipped_anvil', 'damaged_anvil',
+  'beacon', 'brewing_stand', 'loom', 'cartography_table', 'grindstone',
+  'smithing_table', 'stonecutter', 'bell', 'campfire', 'soul_campfire',
+  'respawn_anchor', 'lever', 'stone_button', 'oak_button', 'spruce_button',
+  'birch_button', 'jungle_button', 'acacia_button', 'dark_oak_button',
+  'mangrove_button', 'cherry_button', 'bamboo_button', 'crimson_button',
+  'warped_button', 'polished_blackstone_button',
+  'oak_door', 'iron_door', 'spruce_door', 'birch_door', 'jungle_door',
+  'acacia_door', 'dark_oak_door', 'mangrove_door', 'cherry_door', 'bamboo_door',
+  'oak_trapdoor', 'iron_trapdoor', 'spruce_trapdoor', 'birch_trapdoor',
+  'jungle_trapdoor', 'acacia_trapdoor', 'dark_oak_trapdoor', 'mangrove_trapdoor',
+  'cherry_trapdoor', 'bamboo_trapdoor',
+  'oak_fence_gate', 'spruce_fence_gate', 'birch_fence_gate', 'jungle_fence_gate',
+  'acacia_fence_gate', 'dark_oak_fence_gate', 'mangrove_fence_gate',
+  'cherry_fence_gate', 'bamboo_fence_gate',
+  'note_block', 'jukebox', 'command_block', 'chain_command_block',
+  'repeating_command_block', 'structure_block', 'jigsaw', 'lectern',
+  'daylight_detector', 'comparator', 'repeater',
+]);
+
+/**
+ * Checks whether a block name is an interactive block that intercepts right-click unless sneaking.
+ *
+ * @param {string} blockName
+ * @returns {boolean}
+ */
+function isInteractiveBlock(blockName) {
+  if (!blockName) return false;
+  if (INTERACTIVE_BLOCKS.has(blockName)) return true;
+  return (
+    blockName.endsWith('_button') ||
+    blockName.endsWith('_door') ||
+    blockName.endsWith('_trapdoor') ||
+    blockName.endsWith('_fence_gate') ||
+    blockName.endsWith('_bed') ||
+    blockName.endsWith('_shulker_box')
+  );
+}
+
+/**
  * Checks if a block volume overlaps an entity bounding box.
  *
  * @param {Vec3} entityPos
@@ -140,16 +186,18 @@ function intersectsPlayer(playerPos, blockPos) {
 }
 
 /**
- * Finds a solid adjacent reference block and the corresponding face vector to attach the new block.
+ * Finds all solid adjacent reference blocks and their face vectors.
+ * Prioritizes non-interactive solid blocks over interactive blocks (e.g. crafting tables),
+ * and floor support over wall faces.
  *
  * @param {import('mineflayer').Bot} bot
  * @param {Vec3} targetVec
- * @returns {{ referenceBlock: import('prismarine-block').Block, faceVector: Vec3 } | { error: string, occupiedBy?: string }}
+ * @returns {Array<{ referenceBlock: import('prismarine-block').Block, faceVector: Vec3 } | { error: string, occupiedBy?: string }>}
  */
-function findPlacementReference(bot, targetVec) {
+function findPlacementReferences(bot, targetVec) {
   const targetBlock = bot.blockAt(targetVec);
   if (!targetBlock) {
-    return { error: 'target_chunk_not_loaded' };
+    return [{ error: 'target_chunk_not_loaded' }];
   }
 
   // Target position must be replaceable or air
@@ -163,19 +211,20 @@ function findPlacementReference(bot, targetVec) {
     targetBlock.material?.includes('replaceable');
 
   if (!isReplaceable && targetBlock.boundingBox === 'block') {
-    return { error: 'target_occupied', occupiedBy: targetBlock.name };
+    return [{ error: 'target_occupied', occupiedBy: targetBlock.name }];
   }
 
-  // 6 adjacent face candidates
+  // 6 adjacent face candidates: floor first, then lateral walls, then ceiling
   const ADJACENT_FACES = [
     { dir: new Vec3(0, -1, 0), face: new Vec3(0, 1, 0) }, // Supporting block below (top face)
-    { dir: new Vec3(0, 1, 0), face: new Vec3(0, -1, 0) },  // Ceiling above (bottom face)
     { dir: new Vec3(-1, 0, 0), face: new Vec3(1, 0, 0) },  // West wall (east face)
     { dir: new Vec3(1, 0, 0), face: new Vec3(-1, 0, 0) },  // East wall (west face)
     { dir: new Vec3(0, 0, -1), face: new Vec3(0, 0, 1) },  // North wall (south face)
     { dir: new Vec3(0, 0, 1), face: new Vec3(0, 0, -1) },  // South wall (north face)
+    { dir: new Vec3(0, 1, 0), face: new Vec3(0, -1, 0) },  // Ceiling above (bottom face)
   ];
 
+  const candidates = [];
   for (const { dir, face } of ADJACENT_FACES) {
     const refPos = targetVec.plus(dir);
     const refBlock = bot.blockAt(refPos);
@@ -188,11 +237,34 @@ function findPlacementReference(bot, targetVec) {
       refBlock.name !== 'lava' &&
       refBlock.boundingBox === 'block'
     ) {
-      return { referenceBlock: refBlock, faceVector: face };
+      candidates.push({ referenceBlock: refBlock, faceVector: face });
     }
   }
 
-  return { error: 'no_supporting_block' };
+  if (candidates.length === 0) {
+    return [{ error: 'no_supporting_block' }];
+  }
+
+  // Prioritize non-interactive blocks over interactive ones (like crafting tables)
+  candidates.sort((a, b) => {
+    const aInteractive = isInteractiveBlock(a.referenceBlock.name) ? 1 : 0;
+    const bInteractive = isInteractiveBlock(b.referenceBlock.name) ? 1 : 0;
+    return aInteractive - bInteractive;
+  });
+
+  return candidates;
+}
+
+/**
+ * Finds a solid adjacent reference block and the corresponding face vector to attach the new block.
+ *
+ * @param {import('mineflayer').Bot} bot
+ * @param {Vec3} targetVec
+ * @returns {{ referenceBlock: import('prismarine-block').Block, faceVector: Vec3 } | { error: string, occupiedBy?: string }}
+ */
+function findPlacementReference(bot, targetVec) {
+  const candidates = findPlacementReferences(bot, targetVec);
+  return candidates[0];
 }
 
 /**
@@ -484,13 +556,13 @@ function createPlacer(bot, actionManager) {
           };
         }
 
-        // Re-verify reference block
-        const liveRef = findPlacementReference(bot, targetVec);
-        if (liveRef.error) {
+        // Re-verify reference block candidates
+        const candidateRefs = findPlacementReferences(bot, targetVec);
+        if (candidateRefs.length === 0 || candidateRefs[0].error) {
           return {
             outcome: 'failed',
-            reason: liveRef.error,
-            details: { target: targetVec, error: liveRef.error },
+            reason: candidateRefs[0]?.error || 'no_supporting_block',
+            details: { target: targetVec, error: candidateRefs[0]?.error || 'no_supporting_block' },
           };
         }
 
@@ -517,21 +589,48 @@ function createPlacer(bot, actionManager) {
 
         if (signal.aborted) throw new Error('aborted');
 
-        // Place block with abort racing
-        try {
-          await Promise.race([
-            bot.placeBlock(liveRef.referenceBlock, liveRef.faceVector),
-            new Promise((_, reject) => {
-              if (signal.aborted) return reject(new Error('aborted'));
-              signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
-            }),
-          ]);
-        } catch (err) {
-          if (signal.aborted) throw err;
+        // Place block trying available candidates with sneak support
+        let placementSucceeded = false;
+        let lastPlacementError = null;
+        let usedRef = null;
+
+        for (const liveRef of candidateRefs) {
+          if (signal.aborted) throw new Error('aborted');
+
+          const needSneak = isInteractiveBlock(liveRef.referenceBlock.name);
+          if (needSneak && typeof bot.setControlState === 'function') {
+            bot.setControlState('sneak', true);
+          }
+
+          try {
+            await Promise.race([
+              bot.placeBlock(liveRef.referenceBlock, liveRef.faceVector),
+              new Promise((_, reject) => {
+                if (signal.aborted) return reject(new Error('aborted'));
+                signal.addEventListener('abort', () => reject(new Error('aborted')), { once: true });
+              }),
+            ]);
+            placementSucceeded = true;
+            usedRef = liveRef;
+            break;
+          } catch (err) {
+            if (signal.aborted) throw err;
+            lastPlacementError = err;
+          } finally {
+            if (needSneak && typeof bot.setControlState === 'function') {
+              bot.setControlState('sneak', false);
+            }
+            if (bot.currentWindow && typeof bot.closeWindow === 'function') {
+              try { bot.closeWindow(bot.currentWindow); } catch (_) {}
+            }
+          }
+        }
+
+        if (!placementSucceeded) {
           return {
             outcome: 'failed',
             reason: 'placement_failed',
-            details: { error: err.message, target: targetVec },
+            details: { error: lastPlacementError?.message || 'all_candidate_references_failed', target: targetVec },
           };
         }
 
@@ -582,7 +681,7 @@ function createPlacer(bot, actionManager) {
             finalBlockState: chosenBlockName,
             itemsConsumed: 1,
             worldChanged: true,
-            referencePos: liveRef.referenceBlock.position,
+            referencePos: usedRef ? usedRef.referenceBlock.position : null,
             previouslyHeld: previouslyHeld ? previouslyHeld.name : null,
           },
         };
@@ -595,6 +694,8 @@ function createPlacer(bot, actionManager) {
   return {
     place,
     findPlacementReference,
+    findPlacementReferences,
+    isInteractiveBlock,
     checkEntityCollisions,
     checkBoundingBoxClearance: (target) => checkEntityCollisions(bot, target).clear,
     isPlaceableBlock,
@@ -606,6 +707,8 @@ function createPlacer(bot, actionManager) {
 module.exports = {
   createPlacer,
   findPlacementReference,
+  findPlacementReferences,
+  isInteractiveBlock,
   checkEntityCollisions,
   intersectsPlayer,
   isPlaceableBlock,

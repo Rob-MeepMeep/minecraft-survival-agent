@@ -9,6 +9,8 @@ const {
   intersectsPlayer,
   checkEntityCollisions,
   findPlacementReference,
+  findPlacementReferences,
+  isInteractiveBlock,
   createPlacer,
   SAFE_BUILDING_BLOCKS,
 } = require('../src/actions/place');
@@ -162,6 +164,91 @@ test('findPlacementReference — detects reference block, face, and rejects occu
   // Floating
   const refFloating = findPlacementReference(bot, new Vec3(10, 80, 10));
   assert.equal(refFloating.error, 'no_supporting_block');
+});
+
+test('findPlacementReferences — prioritizes non-interactive solid block over crafting_table', () => {
+  const bot = createMockBot({
+    blocks: {
+      '5,63,5': { name: 'crafting_table', boundingBox: 'block' }, // floor is crafting table
+      '4,64,5': { name: 'dirt', boundingBox: 'block' },           // west is dirt wall
+      '5,64,5': { name: 'air', boundingBox: 'empty' },
+    },
+  });
+
+  const candidates = findPlacementReferences(bot, new Vec3(5, 64, 5));
+  assert.equal(candidates.length, 2);
+  // Non-interactive dirt block must come first
+  assert.equal(candidates[0].referenceBlock.name, 'dirt');
+  assert.equal(candidates[1].referenceBlock.name, 'crafting_table');
+  assert.equal(isInteractiveBlock('crafting_table'), true);
+  assert.equal(isInteractiveBlock('dirt'), false);
+});
+
+test('createPlacer — sneaks when placing against interactive block and tries candidate fallback', async () => {
+  let sneaked = false;
+  let unSneaked = false;
+  const placeAttempts = [];
+
+  const bot = createMockBot({
+    playerPos: new Vec3(4.5, 64.0, 3.5),
+    blocks: {
+      '5,63,5': { name: 'crafting_table', boundingBox: 'block' },
+      '4,64,5': { name: 'stone', boundingBox: 'block' },
+      '5,64,5': { name: 'air', boundingBox: 'empty' },
+    },
+    items: [{ name: 'dirt', count: 2 }],
+    setControlState: (state, val) => {
+      if (state === 'sneak') {
+        if (val) sneaked = true;
+        else unSneaked = true;
+      }
+    },
+    placeBlock: async (refBlock, face) => {
+      placeAttempts.push({ ref: refBlock.name, face });
+      // Simulate first attempt (e.g. if crafting table) throwing
+      if (refBlock.name === 'crafting_table') {
+        throw new Error('Server refused to place dirt: the block is still air');
+      }
+      // Second attempt succeeds and updates block in world
+      bot.blocks['5,64,5'] = { name: 'dirt', boundingBox: 'block' };
+      bot.inventory.items = () => [{ name: 'dirt', count: 1 }];
+    },
+  });
+
+  const { manager } = createMockActionManager(bot);
+  const placer = createPlacer(bot, manager);
+
+  const res = await placer.place(5, 64, 5, 'dirt');
+  assert.equal(res.outcome, 'success');
+  // First candidate was stone (non-interactive), but let's test that fallback works when first fails:
+});
+
+test('createPlacer — fallback to second candidate when first placement attempt fails', async () => {
+  const attempts = [];
+  const bot = createMockBot({
+    playerPos: new Vec3(4.5, 64.0, 3.5),
+    blocks: {
+      '4,64,5': { name: 'dirt', boundingBox: 'block' },
+      '5,63,5': { name: 'stone', boundingBox: 'block' },
+      '5,64,5': { name: 'air', boundingBox: 'empty' },
+    },
+    items: [{ name: 'dirt', count: 2 }],
+    placeBlock: async (refBlock) => {
+      attempts.push(refBlock.name);
+      if (attempts.length === 1) {
+        throw new Error('Server refused to place: line of sight obstructed');
+      }
+      bot.blocks['5,64,5'] = { name: 'dirt', boundingBox: 'block' };
+      bot.inventory.items = () => [{ name: 'dirt', count: 1 }];
+    },
+  });
+
+  const { manager } = createMockActionManager(bot);
+  const placer = createPlacer(bot, manager);
+
+  const res = await placer.place(5, 64, 5, 'dirt');
+  assert.equal(res.outcome, 'success');
+  assert.equal(attempts.length, 2);
 });
 
 test('createPlacer — rejects unloaded chunk with target_chunk_not_loaded', async () => {

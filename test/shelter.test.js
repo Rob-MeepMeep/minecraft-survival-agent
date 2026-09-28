@@ -202,6 +202,19 @@ describe('Stage 3D — Shelter Site Evaluation & Safety Filter', () => {
     }
   });
 
+  it('rejects candidate site containing player structures or foreign blocks in floor', () => {
+    const center = new Vec3(10, 64, 20);
+    const foreignFloorTypes = ['crafting_table', 'chest', 'furnace', 'iron_ore', 'oak_planks'];
+    for (const fType of foreignFloorTypes) {
+      const bot = createMockBot({
+        blocks: {
+          '10,63,20': { name: fType, boundingBox: 'block' },
+        },
+      });
+      assert.equal(evaluateSiteCandidate(bot, center), null, `Should reject candidate with ${fType} in floor`);
+    }
+  });
+
   it('rejects site when entity intersects footprint', () => {
     const center = new Vec3(10, 64, 20);
     const bot = createMockBot({

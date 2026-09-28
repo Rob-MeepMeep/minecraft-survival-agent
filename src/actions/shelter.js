@@ -128,6 +128,8 @@ function evaluateSiteCandidate(bot, center) {
         if (!underFloor || underFloor.boundingBox !== 'block') return null;
       }
       if (isHazardousBlock(floorBlock.name)) return null;
+      if (['crafting_table', 'chest', 'furnace', 'trapped_chest', 'barrel'].includes(floorBlock.name)) return null;
+      if (floorBlock.name.endsWith('_ore') || floorBlock.name.endsWith('_planks')) return null;
     }
   }
 
