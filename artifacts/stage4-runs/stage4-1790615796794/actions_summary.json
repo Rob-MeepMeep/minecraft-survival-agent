@@ -1,0 +1,15 @@
+{
+  "totalAttempted": 38,
+  "succeeded": 36,
+  "failed": 2,
+  "actions": {
+    "gather": 8,
+    "craft": 4,
+    "navigate": 2,
+    "place": 24
+  },
+  "failures": {
+    "gather:could_not_reach_block": 1,
+    "craft:ingredient_consumption_mismatch": 1
+  }
+}

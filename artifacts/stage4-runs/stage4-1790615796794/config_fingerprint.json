@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "runId": "stage4-1790615796794",
+  "timestamp": "2026-09-28T17:53:18.789Z",
+  "host": "localhost",
+  "port": 61375,
+  "version": "1.21",
+  "options": {
+    "threatDistance": null,
+    "criticalFood": 6,
+    "eatThreshold": 14,
+    "targetReserve": 30,
+    "foodReserveNutrition": 10,
+    "exitTimeoutMs": 60000,
+    "dawnWaitTimeoutMs": 10000,
+    "tickIntervalMs": 100
+  },
+  "sha256": "4d3233da1296b335b24cfee85169e9fb58014e394f883c61c711d96f129e5bc9"
+}
