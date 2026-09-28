@@ -355,6 +355,30 @@ function findSafeBlock(bot, matcher, maxDistance = 16, failureTracker = null, op
       }
     }
 
+    // For logs: reject unreachable logs lacking a walkable standing surface within reach
+    if (b.name?.endsWith('_log')) {
+      if (typeof bot.blockAt === 'function') {
+        const offsets = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+        let hasStand = false;
+        for (const [ox, oz] of offsets) {
+          for (let dy = -1; dy <= 3; dy++) {
+            const wy = b.position.y - dy;
+            const stand = bot.blockAt(new Vec3(b.position.x + ox, wy, b.position.z + oz));
+            if (stand && stand.boundingBox === 'block') {
+              const body = bot.blockAt(new Vec3(b.position.x + ox, wy + 1, b.position.z + oz));
+              const head = bot.blockAt(new Vec3(b.position.x + ox, wy + 2, b.position.z + oz));
+              if (body && body.boundingBox === 'empty' && head && head.boundingBox === 'empty') {
+                hasStand = true;
+                break;
+              }
+            }
+          }
+          if (hasStand) break;
+        }
+        if (!hasStand) return false;
+      }
+    }
+
     if (failureTracker) {
       const key = FailureTracker.makeKey('gather', b.position);
       if (failureTracker.isOnCooldown(key)) return false;

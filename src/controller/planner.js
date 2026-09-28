@@ -402,7 +402,7 @@ function findExposedStone(bot, failureTracker, maxDistance = 32) {
   const stoneId = bot.registry?.blocksByName?.stone?.id;
   if (!stoneId) return null;
 
-  return bot.findBlock({
+  const checkStone = (maxDy) => bot.findBlock({
     matching: stoneId,
     maxDistance,
     useExtraInfo: (b) => {
@@ -412,8 +412,8 @@ function findExposedStone(bot, failureTracker, maxDistance = 32) {
       const key = FailureTracker.makeKey('gather', { x: b.position.x, y: b.position.y, z: b.position.z, block: b.name });
       if (failureTracker && failureTracker.isOnCooldown(key)) return false;
 
-      // Must be near bot walking elevation (+-2.5 blocks)
-      if (bot.entity?.position && Math.abs(b.position.y - bot.entity.position.y) > 2.5) return false;
+      // Must be near bot walking elevation
+      if (bot.entity?.position && Math.abs(b.position.y - bot.entity.position.y) > maxDy) return false;
 
       // Must not be under feet
       if (isDirectlyUnderFeet(bot, b.position)) return false;
@@ -445,6 +445,8 @@ function findExposedStone(bot, failureTracker, maxDistance = 32) {
       return false;
     },
   });
+
+  return checkStone(2.5) || checkStone(3.5);
 }
 
 
@@ -988,19 +990,24 @@ class GoalPlanner {
     // =========================================================================
     if (goal === 'wait_out_night') {
       const timeOfDay = simulatedState?.timeOfDay ?? (bot?.time?.timeOfDay !== undefined ? bot.time.timeOfDay : 13000);
+      const currentFood = simulatedState ? (simulatedState.food ?? 20) : (bot.food ?? 20);
+      const currentHealth = simulatedState ? (simulatedState.health ?? 20) : (bot?.health ?? 20);
 
-      // Safe Exit Window: timeOfDay >= 23000 || timeOfDay < 10000
-      if (timeOfDay >= DAWN_TIME || timeOfDay < SHELTER_PREP_TIME) {
+      // Safe Exit Window: actual dawn has arrived after nightfall (timeOfDay >= 23000 or early morning window < 1000)
+      const isDawn = timeOfDay >= DAWN_TIME || timeOfDay < 1000;
+      // If entered due to daytime emergency health, exit only once health has recovered to safe levels
+      const isDaytime = timeOfDay >= 1000 && timeOfDay < SHELTER_PREP_TIME;
+      const isHealthRecovered = currentHealth > 14;
+
+      if (isDawn || (isDaytime && isHealthRecovered)) {
         return {
           status: 'completed',
           goal: 'wait_out_night',
-          message: `Daylight safe exit window reached (timeOfDay: ${timeOfDay}).`,
+          message: `Safe exit window reached (timeOfDay: ${timeOfDay}, health: ${currentHealth}).`,
         };
       }
 
       // Check hunger while sheltered: eat when hunger is low (<= 14) or to reach regeneration threshold (food >= 18) when health < 20
-      const currentFood = simulatedState ? (simulatedState.food ?? 20) : (bot.food ?? 20);
-      const currentHealth = simulatedState ? (simulatedState.health ?? 20) : (bot?.health ?? 20);
       const needsRegenFood = currentHealth < 20 && currentFood < 18;
       if (currentFood <= 14 || needsRegenFood) {
         const safeFood = items.find(i => SAFE_FOODS.has(i.name) && i.count > 0);
@@ -1359,30 +1366,62 @@ class GoalPlanner {
         const logIds = LOG_TYPES.map(name => bot.registry?.blocksByName?.[name]?.id).filter(Boolean);
         const botY = bot.entity?.position?.y;
 
-        // Pass 1: Prioritize logs near player elevation (within +/- 4 blocks in Y)
+        const isLogReachable = (b) => {
+          if (!b || !b.position) return false;
+          const colKey = `gather:col:${Math.floor(b.position.x)},${Math.floor(b.position.z)}`;
+          if (failureTracker && failureTracker.isOnCooldown(colKey)) return false;
+          const key = FailureTracker.makeKey('gather', { x: b.position.x, y: b.position.y, z: b.position.z, block: b.name });
+          if (failureTracker && failureTracker.isOnCooldown(key)) return false;
+
+          // Reject unreachable logs: must have a walkable block with 2 empty spaces above it within mining reach
+          if (typeof bot.blockAt === 'function') {
+            const offsets = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [1, -1], [-1, 1], [-1, -1]];
+            let hasStand = false;
+            for (const [ox, oz] of offsets) {
+              for (let dy = -1; dy <= 3; dy++) {
+                const wy = b.position.y - dy;
+                const stand = bot.blockAt(new Vec3(b.position.x + ox, wy, b.position.z + oz));
+                if (stand && stand.boundingBox === 'block') {
+                  const body = bot.blockAt(new Vec3(b.position.x + ox, wy + 1, b.position.z + oz));
+                  const head = bot.blockAt(new Vec3(b.position.x + ox, wy + 2, b.position.z + oz));
+                  if (body && body.boundingBox === 'empty' && head && head.boundingBox === 'empty') {
+                    hasStand = true;
+                    break;
+                  }
+                }
+              }
+              if (hasStand) break;
+            }
+            if (!hasStand) return false;
+          }
+          return true;
+        };
+
+        // Pass 1: Prioritize logs near player elevation (within +/- 4 blocks in Y) within 32 blocks
         let block = bot.findBlock({
           matching: logIds,
           maxDistance: 32,
           useExtraInfo: b => {
             if (botY !== undefined && Math.abs(b.position.y - botY) > 4) return false;
-            const colKey = `gather:col:${Math.floor(b.position.x)},${Math.floor(b.position.z)}`;
-            if (failureTracker.isOnCooldown(colKey)) return false;
-            const key = FailureTracker.makeKey('gather', { x: b.position.x, y: b.position.y, z: b.position.z, block: b.name });
-            return !failureTracker.isOnCooldown(key);
+            return isLogReachable(b);
           },
         });
 
-        // Pass 2: Fallback to any log within 32 blocks
+        // Pass 2: Search within 48 blocks for reachable logs (e.g. trees on hills or mounds)
         if (!block) {
           block = bot.findBlock({
             matching: logIds,
-            maxDistance: 32,
-            useExtraInfo: b => {
-              const colKey = `gather:col:${Math.floor(b.position.x)},${Math.floor(b.position.z)}`;
-              if (failureTracker.isOnCooldown(colKey)) return false;
-              const key = FailureTracker.makeKey('gather', { x: b.position.x, y: b.position.y, z: b.position.z, block: b.name });
-              return !failureTracker.isOnCooldown(key);
-            },
+            maxDistance: 48,
+            useExtraInfo: b => isLogReachable(b),
+          });
+        }
+
+        // Pass 3: Search within 64 blocks for any grounded tree trunk
+        if (!block) {
+          block = bot.findBlock({
+            matching: logIds,
+            maxDistance: 64,
+            useExtraInfo: b => isLogReachable(b),
           });
         }
 
@@ -1396,7 +1435,7 @@ class GoalPlanner {
       return {
         status: 'action_required',
         action: 'gather',
-        args: [targetPos || targetLog, { maxDistance: 32, timeoutMs: 30000 }],
+        args: [targetPos || targetLog, { maxDistance: 48, timeoutMs: 30000 }],
         reason: 'gather_logs_for_planks',
         details: {
           neededPlanks: totalPlanksNeeded,

@@ -152,7 +152,7 @@ function evaluateSiteCandidate(bot, center) {
         // Foreign block check: reject player structures, chests, crafting tables, furnaces, ores
         if (['crafting_table', 'chest', 'furnace', 'trapped_chest', 'barrel'].includes(block.name)) return null;
         if (block.name.endsWith('_ore') || block.name.endsWith('_planks')) return null;
-        if (block.boundingBox === 'block' && !APPROVED_SHELTER_MATERIALS.has(block.name)) return null;
+        if (block.name !== 'air' && !APPROVED_SHELTER_MATERIALS.has(block.name)) return null;
       }
     }
   }

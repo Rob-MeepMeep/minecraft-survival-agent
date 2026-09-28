@@ -1429,8 +1429,11 @@ class SurvivalController {
       }
 
       if (this.currentGoal === 'wait_out_night') {
+        const timeOfDay = snap.timeOfDay !== null ? snap.timeOfDay : (bot?.time?.timeOfDay ?? 13000);
         this.shelterSafetyClaim = false;
-        this._recordMilestone('night_survived', runId);
+        if (timeOfDay >= DAWN_TIME || timeOfDay < 1000) {
+          this._recordMilestone('night_survived', runId);
+        }
         this.currentGoal = 'leave_shelter';
         const bp = loadBlueprint();
         if (bp) {
@@ -1449,8 +1452,11 @@ class SurvivalController {
       }
 
       if (this.currentGoal === 'leave_shelter') {
+        const timeOfDay = snap.timeOfDay !== null ? snap.timeOfDay : (bot?.time?.timeOfDay ?? 13000);
         this.shelterSafetyClaim = false;
-        this._recordMilestone('dawn_exit_completed', runId);
+        if (timeOfDay >= DAWN_TIME || timeOfDay < 1000) {
+          this._recordMilestone('dawn_exit_completed', runId);
+        }
         const bp = loadBlueprint();
         if (bp) {
           bp.buildState = 'completed';
