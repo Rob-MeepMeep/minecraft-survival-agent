@@ -4,11 +4,13 @@ An autonomous, deterministic Minecraft Java Edition survival agent built with [M
 
 The agent survives the first natural day and night cycle (24,000 ticks) autonomously: it gathers wood and stone, crafts wooden and stone pickaxes, procures food, evades hostile mobs, constructs a verified 25-block shelter before dusk, audits enclosure integrity through the night, emerges safely at dawn, and resumes progression—**with zero slash commands, zero harness injections, and zero external AI/LLM API requirements**.
 
-### 🎯 Stage 4 Acceptance Status: **ACCEPTED** (15/15 Gates Passed)
+### ✅ Stage 4 Acceptance Status: **SIGNED OFF** (15/15 Gates Passed)
+- **Signed Off:** 2026-09-28T20:54:13+01:00 — Final commit [`e3fcfce`](https://github.com/Rob-MeepMeep/minecraft-survival-agent/commit/e3fcfce)
 - **Live Run ID:** [`stage4-1790615796794`](file:///c:/Users/rob_k/Desktop/Minecraft%20Agent/artifacts/stage4-runs/stage4-1790615796794/result.json)
 - **Full Verification Report:** [`STAGE_4_VERIFICATION_REPORT.md`](file:///c:/Users/rob_k/Desktop/Minecraft%20Agent/STAGE_4_VERIFICATION_REPORT.md)
 - **Vitals:** 20/20 HP (0 damage taken), 20/20 Food across 24,000 continuous ticks (~20 mins wall time).
 - **Enclosure Integrity:** 1,242 night audits passed, 0 breaches, zero operator slash commands, zero post-boundary injections.
+- **Manifest Integrity:** `result.json` SHA-256 verified — write-once immutability enforced, post-packaging self-check added.
 
 ---
 
@@ -98,7 +100,8 @@ The agent continuously enforces a deterministic health policy designed to mainta
   - 24,000-tick natural day/night survival verification across 15 causal gates.
   - Health-aware emergency policy and damage tracking.
   - Platform-independent evidence packaging (`result.json`, `manifest.json`, `damage_timeline.json`, `milestones.json`, `actions_summary.json`, `.gz` telemetry and transcripts).
-- **Stage 5 (Open-Ended Survival)**: *Pending Stage 4 acceptance sign-off.*
+  - **Formally signed off 2026-09-28.**
+- **Stage 5 (Multi-Seed Repeatability Matrix):** 🔓 **UNLOCKED** — evaluating $\ge 80\%$ survival across diverse terrain seeds.
 
 ---
 
@@ -151,7 +154,7 @@ When running `npm start`, the interactive REPL supports:
 ## Running Acceptance Tests
 
 ### 1. Full Automated Test Suite
-Runs all 246 deterministic unit, integration, and policy tests across 24 test suites:
+Runs all 250 deterministic unit, integration, and policy tests across 24 test suites:
 ```powershell
 npm test
 ```
